@@ -838,6 +838,7 @@ ul{list-style:none}
       <div class="page-content fade-in">
         <div class="page-header">
           <h2 class="page-title" id="dash-greeting">Welcome back 👋</h2>
+          <p class="page-sub" id="dash-userid">User ID: —</p>
           <p class="page-sub">Here's an overview of your NYSC service year</p>
         </div>
 
@@ -857,6 +858,10 @@ ul{list-style:none}
           <div class="card card-pad stat-card">
             <div class="stat-label">Checklist progress</div>
             <div class="stat-value green" id="dash-progress">—</div>
+          </div>
+          <div class="card card-pad stat-card">
+            <div class="stat-label">User ID</div>
+            <div class="stat-value" id="dash-user-id">—</div>
           </div>
         </div>
 
@@ -942,6 +947,7 @@ ul{list-style:none}
           <h2 class="page-title">Housing</h2>
           <p class="page-sub">Verified lodge listings near PPAs</p>
         </div>
+        <div id="lodgeAdminControls" style="margin-bottom:16px"></div>
         <div class="filter-bar">
           <input type="text" id="lodgeSearch" placeholder="Search lodges…" oninput="filterLodges()"/>
           <select id="lodgeStateFilter" onchange="filterLodges()">
@@ -1235,6 +1241,62 @@ ul{list-style:none}
   </div>
 </div>
 
+<!-- Add Lodge -->
+<div class="modal-backdrop" id="addLodgeModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 class="modal-title">Add lodge (admin only)</h3>
+      <button class="modal-close" onclick="closeModal('addLodgeModal')">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M14 2L2 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Lodge name</label>
+        <input type="text" id="add-lodge-name" class="form-input" placeholder="e.g. Hilltop Lodge" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Area (required)</label>
+        <select id="add-lodge-area" class="form-input"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Price (₦/month)</label>
+        <input type="number" id="add-lodge-price" class="form-input" placeholder="e.g. 15000" min="0" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Room type</label>
+        <select id="add-lodge-roomtype" class="form-input">
+          <option value="">Select room type</option>
+          <option value="self-contain">Self-contain</option>
+          <option value="room-and-parlour">Room and parlour</option>
+          <option value="flat">Flat</option>
+          <option value="duplex">Duplex</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amenities (comma-separated)</label>
+        <input type="text" id="add-lodge-amenities" class="form-input" placeholder="e.g. water, power, security" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contact details</label>
+        <input type="text" id="add-lodge-contact" class="form-input" placeholder="e.g. 080x xxx xxxx" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Distance from PPA</label>
+        <input type="text" id="add-lodge-distance" class="form-input" placeholder="e.g. 3km" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea id="add-lodge-notes" class="form-input" rows="3" placeholder="optional additional details"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addLodgeModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAddLodge()">Add lodge</button>
+    </div>
+  </div>
+</div>
+
 <!-- Culture Detail -->
 <div class="modal-backdrop" id="cultureDetailModal">
   <div class="modal" style="max-width:560px">
@@ -1511,6 +1573,8 @@ async function loadDashboard() {
   const u = APP.user;
   const name = u?.firstName || u?.name?.split(' ')[0] || 'Corper';
   document.getElementById('dash-greeting').textContent = `Welcome back, ${name} 👋`;
+  document.getElementById('dash-userid').textContent = `User ID: ${u?._id || '—'}`;
+  document.getElementById('dash-user-id').textContent = u?._id || '—';
   document.getElementById('dash-clearance').textContent = 'Cleared ✓';
   document.getElementById('dash-cds').textContent = 'Mar 31';
   // Load profile to get posting state
@@ -1724,29 +1788,95 @@ async function loadLodges() {
 }
 
 function renderLodgeAdminButton() {
-  const container = document.querySelector('#app-lodges .section-body');
-  if (container && APP.user?.role === 'admin') {
-    const existing = container.querySelector('.btn-add-lodge');
-    if (!existing) {
-      const btn = document.createElement('button');
-      btn.className = 'btn btn-primary btn-add-lodge';
+  const container = document.getElementById('lodgeAdminControls');
+  if (!container) return;
+  if (APP.user?.role === 'admin') {
+    let btn = container.querySelector('.btn-add-lodge');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.className = 'btn btn-primary btn-full btn-add-lodge';
       btn.textContent = '+ Add lodge';
-      btn.style.marginBottom = '20px';
-      btn.style.width = '100%';
       btn.onclick = openAddLodgeModal;
-      container.insertBefore(btn, container.firstChild);
+      container.appendChild(btn);
     }
+    btn.style.display = 'block';
+  } else {
+    const existing = container.querySelector('.btn-add-lodge');
+    if (existing) existing.style.display = 'none';
   }
 }
 
-function openAddLodgeModal() {
-  const name = prompt('Lodge name:', '');
-  if (!name) return;
-  const state = prompt('State:', '');
-  if (!state) return;
-  const price = prompt('Monthly rent (₦):', '');
-  if (!price) return;
-  addLodge({ name, state, price: parseInt(price) || 0, location: { type: 'Point', coordinates: [0, 0] } });
+async function openAddLodgeModal() {
+  if (APP.user?.role !== 'admin') {
+    toast('Only admins can add lodges.', 'error');
+    return;
+  }
+
+  if (APP.areas.length === 0) {
+    try {
+      const data = await GET('/areas', false);
+      APP.areas = data.areas || data.data || data || [];
+    } catch (e) {
+      toast('Could not load areas: ' + e.message, 'error');
+      return;
+    }
+  }
+
+  const areaSelect = document.getElementById('add-lodge-area');
+  areaSelect.innerHTML = '<option value="">Select area</option>' + APP.areas.map(a => {
+    const label = `${a.name || 'Unknown'}${a.state ? ' (' + a.state + ')' : ''}`;
+    return `<option value="${a._id}">${label}</option>`;
+  }).join('');
+
+  openModal('addLodgeModal');
+}
+
+async function submitAddLodge() {
+  const name = document.getElementById('add-lodge-name').value.trim();
+  const areaId = document.getElementById('add-lodge-area').value;
+  const price = Number(document.getElementById('add-lodge-price').value);
+  const roomType = document.getElementById('add-lodge-roomtype').value;
+  const amenities = document.getElementById('add-lodge-amenities').value.split(',').map(v => v.trim()).filter(Boolean);
+  const publicContact = document.getElementById('add-lodge-contact').value.trim();
+  const distanceFromPPA = document.getElementById('add-lodge-distance').value.trim();
+  const notes = document.getElementById('add-lodge-notes').value.trim();
+
+  if (!name || !areaId || !roomType || Number.isNaN(price) || price < 0) {
+    toast('Please fill in all required lodge fields correctly.', 'error');
+    return;
+  }
+
+  const areaObj = APP.areas.find(a => a._id === areaId);
+  const lodgeData = {
+    name,
+    area: areaId,
+    state: areaObj?.state || '',
+    price,
+    roomType,
+    amenities,
+    publicContact,
+    distanceFromPPA,
+    notes,
+  };
+
+  if (areaObj?.location?.coordinates) {
+    lodgeData.location = { type: 'Point', coordinates: areaObj.location.coordinates };
+  }
+
+  try {
+    await addLodge(lodgeData);
+    closeModal('addLodgeModal');
+    document.getElementById('add-lodge-name').value = '';
+    document.getElementById('add-lodge-area').value = '';
+    document.getElementById('add-lodge-price').value = '';
+    document.getElementById('add-lodge-roomtype').value = '';
+    document.getElementById('add-lodge-amenities').value = '';
+    document.getElementById('add-lodge-contact').value = '';
+    document.getElementById('add-lodge-distance').value = '';
+    document.getElementById('add-lodge-notes').value = '';
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 async function addLodge(data) {
@@ -1754,8 +1884,9 @@ async function addLodge(data) {
     await POST('/lodges', data);
     toast('Lodge added!', 'success');
     loadLodges();
-  } catch(e) {
+  } catch (e) {
     toast('Failed to add lodge: ' + e.message, 'error');
+    throw e;
   }
 }
 
@@ -1768,6 +1899,9 @@ function renderLodges(lodges) {
   grid.innerHTML = lodges.map(l => {
     const price = l.price || l.rentPerMonth || l.monthlyRent || 0;
     const amenities = l.amenities || [];
+    const areaName = l.area?.name || l.area || '';
+    const areaState = l.area?.state || l.state || '';
+    const addressParts = [l.address, areaName, areaState].filter(Boolean);
     return `
     <div class="lodge-card" onclick="openLodgeDetail('${l._id}')">
       <div class="lodge-img">
@@ -1775,7 +1909,7 @@ function renderLodges(lodges) {
       </div>
       <div class="lodge-body">
         <div class="lodge-name">${l.name}</div>
-        <div class="lodge-address">${[l.address, l.area, l.state].filter(Boolean).join(', ')}</div>
+        <div class="lodge-address">${addressParts.join(', ')}</div>
         <div class="lodge-price">${price ? `₦${fmt(price)}` : 'Price on request'} <small>/ month</small></div>
         ${amenities.length ? `<div class="amenity-list">${amenities.slice(0,4).map(a=>`<span class="amenity">${a}</span>`).join('')}</div>` : ''}
         <div class="flex items-center justify-between mt-12">
@@ -1805,12 +1939,14 @@ async function openLodgeDetail(id) {
   let l = lodge;
   try { const d = await GET(`/lodges/${id}`, false); l = d.lodge || d.data || d; } catch(e){}
   const amenities = l.amenities || [];
+  const areaName = l.area?.name || l.area || '—';
+  const areaState = l.area?.state || l.state || '—';
   openDetail(l.name, `
     <div class="detail-section">
       <div class="detail-section-title">Location</div>
       ${detailRow('Address', l.address || '—')}
-      ${detailRow('Area', l.area || '—')}
-      ${detailRow('State', l.state || '—')}
+      ${detailRow('Area', areaName)}
+      ${detailRow('State', areaState)}
     </div>
     <div class="detail-section">
       <div class="detail-section-title">Pricing</div>
@@ -2330,6 +2466,7 @@ async function loadProfile() {
     document.getElementById('profileNameLg').textContent = name;
     document.getElementById('profileMeta').textContent = [profile.role || user?.role || 'Corps member', profile.postedState || user?.postedState].filter(Boolean).join(' • ');
     document.getElementById('profilePersonal').innerHTML = `
+      ${detailRow('User ID', user?._id || profile.user?._id || '—')}
       ${detailRow('Full name', name)}
       ${detailRow('Email', userEmail)}
       ${detailRow('Phone', profile.phone || profile.phoneNumber || '—')}
