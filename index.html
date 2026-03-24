@@ -1349,9 +1349,8 @@ let APP = {
 ================================================================ */
 async function api(method, path, body = null, auth = true) {
   const headers = { 'Content-Type': 'application/json' };
-  // Use token from localStorage for cross-domain auth
-  if (auth && APP.token) headers['Authorization'] = `Bearer ${APP.token}`;
-  const opts = { method, headers }; // Remove credentials: 'include' for cross-domain
+  // Cookies are sent automatically with credentials: 'include'
+  const opts = { method, headers, credentials: 'include' };
   if (body) opts.body = JSON.stringify(body);
   try {
     const res = await fetch(CONFIG.BASE_URL + path, opts);
@@ -1368,20 +1367,19 @@ const PUT  = (path, body, auth=true) => api('PUT', path, body, auth);
 const PATCH = (path, body, auth=true) => api('PATCH', path, body, auth);
 
 /* ================================================================
-   TOKEN STORAGE (Using localStorage for cross-domain auth)
+   TOKEN STORAGE (Using httpOnly cookies)
 ================================================================ */
 function saveToken(token) {
-  APP.token = token;
-  localStorage.setItem('token', token);
+  // Token is stored in httpOnly cookie by backend
+  APP.token = token; // Keep in memory for UI state
 }
 function loadToken() {
-  const token = localStorage.getItem('token');
-  if (token) APP.token = token;
-  return token;
+  // Cannot read httpOnly cookies from JavaScript
+  // Authentication is validated by backend on each request
+  return true;
 }
 function clearToken() {
   APP.token = null;
-  localStorage.removeItem('token');
 }
 
 /* ================================================================
@@ -1541,15 +1539,12 @@ async function doLogout() {
    APP INIT
 ================================================================ */
 async function initApp() {
-  // Load token from localStorage
-  loadToken();
-
   if (!APP.user) {
     try {
       const data = await GET('/auth/me');
       APP.user = data.user || data.data || data;
     } catch(e) {
-      clearToken();
+      // User not authenticated, show login
       showPage('page-login');
       return;
     }
