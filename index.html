@@ -2064,23 +2064,30 @@ async function addChecklistItem(text, section) {
 }
 
 function isItemDone(id, progress) {
-  if (Array.isArray(progress)) return progress.some(p => p.itemId === id || p.item === id || p === id);
+  if (Array.isArray(progress)) return progress.includes(id);
   if (typeof progress === 'object') return progress[id] === true || !!progress[id];
   return false;
 }
 
 async function toggleCheckItem(itemId) {
   const el = document.getElementById(`check-${itemId}`);
+  const wasDone = el.classList.contains('done');
+  const newDone = !wasDone;
+
+  // Optimistically update UI
+  el.classList.toggle('done');
+  const box = el.querySelector('.check-box');
+  box.innerHTML = newDone ? `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : '';
+
   try {
-    await PATCH(`/checklist/${itemId}`, {});
-    el.classList.toggle('done');
-    const box = el.querySelector('.check-box');
-    const isDone = el.classList.contains('done');
-    box.innerHTML = isDone ? `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : '';
-    // Refresh progress
+    await PATCH(`/checklist/${itemId}`, { completed: newDone });
+    // Refresh progress after successful API call
     const prog = await GET('/checklist/progress');
     updateChecklistProgress(prog);
   } catch(e) {
+    // Revert UI on error
+    el.classList.toggle('done');
+    box.innerHTML = wasDone ? `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : '';
     toast(e.message, 'error');
   }
 }
