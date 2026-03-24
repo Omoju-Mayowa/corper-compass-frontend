@@ -354,6 +354,7 @@ ul{list-style:none}
   border-left:3px solid var(--green-3);font-size:13px;
   display:flex;align-items:center;gap:10px;cursor:pointer;
   transition:background var(--transition);
+  margin-top: 8px;
 }
 .announcement-item:hover{background:var(--page-2)}
 .ann-dot{width:7px;height:7px;background:var(--green-3);border-radius:50%;flex-shrink:0}
@@ -858,10 +859,6 @@ ul{list-style:none}
           <div class="card card-pad stat-card">
             <div class="stat-label">Checklist progress</div>
             <div class="stat-value green" id="dash-progress">—</div>
-          </div>
-          <div class="card card-pad stat-card">
-            <div class="stat-label">User ID</div>
-            <div class="stat-value" id="dash-user-id">—</div>
           </div>
         </div>
 
@@ -1573,8 +1570,8 @@ async function loadDashboard() {
   const u = APP.user;
   const name = u?.firstName || u?.name?.split(' ')[0] || 'Corper';
   document.getElementById('dash-greeting').textContent = `Welcome back, ${name} 👋`;
-  // document.getElementById('dash-userid').textContent = `User ID: ${u?._id || '—'}`;
-  document.getElementById('dash-user-id').textContent = u?._id || '—';
+  document.getElementById('dash-userid').textContent = `User ID: ${u?._id || '—'}`;
+  // document.getElementById('dash-user-id').textContent = u?._id || '—';
   document.getElementById('dash-clearance').textContent = 'Cleared ✓';
   document.getElementById('dash-cds').textContent = 'Mar 31';
   // Load profile to get posting state
