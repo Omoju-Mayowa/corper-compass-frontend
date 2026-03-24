@@ -1349,9 +1349,9 @@ let APP = {
 ================================================================ */
 async function api(method, path, body = null, auth = true) {
   const headers = { 'Content-Type': 'application/json' };
-  // Cookies are sent automatically, but include token header for backward compatibility
+  // Use token from localStorage for cross-domain auth
   if (auth && APP.token) headers['Authorization'] = `Bearer ${APP.token}`;
-  const opts = { method, headers, credentials: 'include' }; // Include cookies
+  const opts = { method, headers }; // Remove credentials: 'include' for cross-domain
   if (body) opts.body = JSON.stringify(body);
   try {
     const res = await fetch(CONFIG.BASE_URL + path, opts);
@@ -1368,18 +1368,20 @@ const PUT  = (path, body, auth=true) => api('PUT', path, body, auth);
 const PATCH = (path, body, auth=true) => api('PATCH', path, body, auth);
 
 /* ================================================================
-   TOKEN STORAGE (Now using cookies)
+   TOKEN STORAGE (Using localStorage for cross-domain auth)
 ================================================================ */
 function saveToken(token) {
-  // Token is now stored in httpOnly cookie by backend
-  APP.token = token; // Keep in memory for backward compatibility
+  APP.token = token;
+  localStorage.setItem('token', token);
 }
 function loadToken() {
-  // Token is automatically sent via cookies
-  return true; // Assume authenticated if no 401 errors
+  const token = localStorage.getItem('token');
+  if (token) APP.token = token;
+  return token;
 }
 function clearToken() {
   APP.token = null;
+  localStorage.removeItem('token');
 }
 
 /* ================================================================
@@ -1539,12 +1541,13 @@ async function doLogout() {
    APP INIT
 ================================================================ */
 async function initApp() {
+  // Load token from localStorage
+  loadToken();
+
   if (!APP.user) {
     try {
       const data = await GET('/auth/me');
       APP.user = data.user || data.data || data;
-      // Save token if provided (for backward compatibility)
-      if (data.token) saveToken(data.token);
     } catch(e) {
       clearToken();
       showPage('page-login');
