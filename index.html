@@ -1,0 +1,2455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CorperCompass 🧭</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ================================================================
+   DESIGN TOKENS
+================================================================ */
+:root {
+  --ink: #111210;
+  --ink-70: rgba(17,18,16,.7);
+  --ink-40: rgba(17,18,16,.4);
+  --ink-12: rgba(17,18,16,.12);
+  --ink-06: rgba(17,18,16,.06);
+  --page: #f4f1e8;
+  --page-2: #ece9df;
+  --page-3: #e4e1d6;
+  --white: #ffffff;
+  --green: #1b4d30;
+  --green-2: #2d7a4f;
+  --green-3: #3baa68;
+  --green-bg: rgba(59,170,104,.12);
+  --green-border: rgba(59,170,104,.25);
+  --gold: #b8851f;
+  --gold-bg: rgba(184,133,31,.1);
+  --red: #b93232;
+  --red-bg: rgba(185,50,50,.08);
+  --blue: #1d5fa8;
+  --blue-bg: rgba(29,95,168,.08);
+  --r: 14px;
+  --r-sm: 8px;
+  --r-xs: 5px;
+  --shadow: 0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+  --shadow-md: 0 2px 8px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.08);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,.1), 0 16px 48px rgba(0,0,0,.1);
+  --sidebar-w: 224px;
+  --topbar-h: 60px;
+  --transition: .18s ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--page);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:inherit;border:none;outline:none}
+input,textarea,select{font-family:inherit;outline:none}
+img{max-width:100%;display:block}
+h1,h2,h3,h4,h5,h6{font-family:'Syne',sans-serif;line-height:1.1;letter-spacing:-.02em;color:var(--ink)}
+ul{list-style:none}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--ink-12);border-radius:2px}
+
+/* ================================================================
+   PAGE ROUTER
+================================================================ */
+.page{display:none}
+.page.active{display:flex;flex-direction:column;min-height:100vh}
+.app-page{display:none}
+.app-page.active{display:flex;flex-direction:column;flex:1;overflow-y:auto}
+
+/* ================================================================
+   AUTH PAGES
+================================================================ */
+.auth-shell{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  position:relative;
+  background:var(--page);
+}
+@media(max-width:800px){.auth-shell{grid-template-columns:1fr}}
+.auth-brand{
+  background:var(--green);
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding:48px;
+  position:relative;
+  overflow:hidden;
+}
+@media(max-width:800px){.auth-brand{display:none}}
+.auth-brand::before{
+  content:'';position:absolute;top:-100px;right:-100px;
+  width:400px;height:400px;
+  background:rgba(255,255,255,.04);border-radius:50%;
+}
+.auth-brand::after{
+  content:'';position:absolute;bottom:-60px;left:-60px;
+  width:280px;height:280px;
+  background:rgba(255,255,255,.03);border-radius:50%;
+}
+.brand-logo{display:flex;align-items:center;gap:10px}
+.brand-logo-mark{
+  width:36px;height:36px;background:rgba(255,255,255,.15);
+  border-radius:10px;display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(255,255,255,.2);
+}
+.brand-logo-text{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:white;letter-spacing:-.02em}
+.brand-logo-text span{color:rgba(255,255,255,.6)}
+.brand-headline{
+  font-family:'Syne',sans-serif;font-size:40px;font-weight:800;
+  color:white;line-height:1.05;letter-spacing:-.03em;position:relative;z-index:1;
+}
+.brand-headline em{color:rgba(255,255,255,.5);font-style:normal}
+.brand-tagline{font-size:15px;color:rgba(255,255,255,.5);margin-top:16px;max-width:320px;line-height:1.7;position:relative;z-index:1}
+.brand-features{display:flex;flex-direction:column;gap:12px;position:relative;z-index:1}
+.brand-feat{display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,.7)}
+.brand-feat-dot{width:6px;height:6px;background:var(--green-3);border-radius:50%;flex-shrink:0}
+
+.auth-form-wrap{
+  display:flex;flex-direction:column;justify-content:center;
+  padding:48px;max-width:480px;margin:0 auto;width:100%;
+}
+.auth-form-title{font-size:28px;font-weight:800;margin-bottom:6px}
+.auth-form-sub{font-size:14px;color:var(--ink-70);margin-bottom:36px}
+.auth-form-sub a{color:var(--green-2);font-weight:500}
+
+.form-group{margin-bottom:18px}
+.form-label{display:block;font-size:12px;font-weight:500;color:var(--ink-70);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
+.form-input{
+  width:100%;padding:12px 14px;
+  background:var(--white);border:1px solid var(--ink-12);
+  border-radius:var(--r-sm);font-size:14px;color:var(--ink);
+  transition:border-color var(--transition),box-shadow var(--transition);
+}
+.form-input:focus{border-color:var(--green-2);box-shadow:0 0 0 3px var(--green-bg)}
+.form-input::placeholder{color:var(--ink-40)}
+.form-input.error{border-color:var(--red)}
+.form-hint{font-size:12px;color:var(--red);margin-top:5px;display:none}
+.form-hint.show{display:block}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 20px;border-radius:var(--r-sm);font-size:14px;font-weight:500;
+  transition:all var(--transition);white-space:nowrap;
+}
+.btn-primary{background:var(--green);color:white;box-shadow:0 2px 0 rgba(0,0,0,.15),0 4px 12px rgba(27,77,48,.25)}
+.btn-primary:hover{background:var(--green-2);transform:translateY(-1px);box-shadow:0 3px 0 rgba(0,0,0,.12),0 8px 20px rgba(27,77,48,.3)}
+.btn-primary:active{transform:translateY(0)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--ink-12)}
+.btn-ghost:hover{background:var(--ink-06);border-color:var(--ink-40)}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1px solid rgba(185,50,50,.2)}
+.btn-danger:hover{background:rgba(185,50,50,.15)}
+.btn-full{width:100%}
+.btn-sm{padding:7px 14px;font-size:13px}
+.btn-lg{padding:14px 28px;font-size:15px}
+.btn:disabled{opacity:.5;pointer-events:none}
+
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--ink-40);font-size:12px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--ink-12)}
+
+/* ================================================================
+   APP SHELL
+================================================================ */
+.app-shell{
+  display:none;
+  min-height:100vh;
+}
+.app-shell.active{display:flex}
+
+/* SIDEBAR */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;
+  background:var(--white);border-right:1px solid var(--ink-12);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;z-index:200;
+}
+.sidebar-logo{
+  padding:20px 20px 16px;border-bottom:1px solid var(--ink-06);
+  display:flex;align-items:center;gap:10px;
+}
+.sidebar-logo-mark{
+  width:30px;height:30px;background:var(--green);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.sidebar-logo-text{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;letter-spacing:-.02em}
+.sidebar-logo-text span{color:var(--green-2)}
+
+.sidebar-nav{padding:12px 10px;flex:1;overflow-y:auto}
+.nav-section-label{
+  font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-40);padding:0 10px;margin:16px 0 6px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:var(--r-sm);
+  font-size:13px;font-weight:400;color:var(--ink-70);
+  cursor:pointer;transition:all var(--transition);margin-bottom:2px;
+}
+.nav-item:hover{background:var(--ink-06);color:var(--ink)}
+.nav-item.active{background:var(--green-bg);color:var(--green);font-weight:500}
+.nav-item svg{flex-shrink:0;opacity:.7}
+.nav-item.active svg{opacity:1}
+
+.sidebar-footer{padding:12px 10px;border-top:1px solid var(--ink-06)}
+.sidebar-user{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;
+  border-radius:var(--r-sm);cursor:pointer;transition:all var(--transition);
+}
+.sidebar-user:hover{background:var(--ink-06)}
+.user-avatar{
+  width:32px;height:32px;background:var(--green-bg);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--green);
+  border:1px solid var(--green-border);
+}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:11px;color:var(--ink-40);text-transform:capitalize}
+
+/* MAIN AREA */
+.main-area{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* TOPBAR */
+.topbar{
+  height:var(--topbar-h);background:var(--white);border-bottom:1px solid var(--ink-06);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;position:sticky;top:0;z-index:100;
+}
+.topbar-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700}
+.topbar-actions{display:flex;align-items:center;gap:12px}
+.topbar-search{
+  display:flex;align-items:center;gap:8px;
+  background:var(--page);border:1px solid var(--ink-12);border-radius:var(--r-sm);
+  padding:7px 12px;min-width:220px;
+}
+.topbar-search input{background:transparent;border:none;font-size:13px;color:var(--ink);flex:1}
+.topbar-search input::placeholder{color:var(--ink-40)}
+
+/* CONTENT */
+.page-content{padding:28px;flex:1}
+.page-header{margin-bottom:28px}
+.page-title{font-size:26px;font-weight:800}
+.page-sub{font-size:14px;color:var(--ink-70);margin-top:4px}
+
+/* ================================================================
+   CARDS / GRID
+================================================================ */
+.card{background:var(--white);border-radius:var(--r);border:1px solid var(--ink-06);box-shadow:var(--shadow)}
+.card-pad{padding:24px}
+.card-sm-pad{padding:18px}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:1100px){.grid-3{grid-template-columns:1fr 1fr}.grid-4{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+
+/* STAT CARD */
+.stat-card{display:flex;flex-direction:column;gap:6px}
+.stat-label{font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-40)}
+.stat-value{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-.03em}
+.stat-value.green{color:var(--green-2)}
+.stat-change{font-size:12px;color:var(--ink-40)}
+
+/* ================================================================
+   BADGE / PILL / TAG
+================================================================ */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:100px;font-size:11px;font-weight:500}
+.badge-green{background:var(--green-bg);color:var(--green-2);border:1px solid var(--green-border)}
+.badge-gold{background:var(--gold-bg);color:var(--gold)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-blue{background:var(--blue-bg);color:var(--blue)}
+.badge-gray{background:var(--ink-06);color:var(--ink-70)}
+.badge-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+/* ================================================================
+   TOAST / ALERT
+================================================================ */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{
+  background:var(--ink);color:white;padding:12px 18px;border-radius:var(--r-sm);
+  font-size:13px;font-weight:500;max-width:320px;pointer-events:auto;
+  animation:toastIn .25s ease;box-shadow:var(--shadow-lg);
+  display:flex;align-items:center;gap:10px;
+}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.alert{padding:14px 16px;border-radius:var(--r-sm);font-size:14px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px}
+.alert-error{background:var(--red-bg);color:var(--red);border:1px solid rgba(185,50,50,.15)}
+.alert-success{background:var(--green-bg);color:var(--green-2);border:1px solid var(--green-border)}
+.alert-info{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(29,95,168,.15)}
+.alert svg{flex-shrink:0;margin-top:1px}
+
+/* ================================================================
+   SPINNER / LOADING
+================================================================ */
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--ink-12);border-top-color:var(--green-2);border-radius:50%;animation:spin .7s linear infinite}
+.spinner-sm{width:14px;height:14px}
+.spinner-lg{width:32px;height:32px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-wrap{display:flex;align-items:center;justify-content:center;padding:60px;flex-direction:column;gap:12px}
+.loading-text{font-size:13px;color:var(--ink-40)}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:60px 20px}
+.empty-state-icon{font-size:40px;margin-bottom:12px}
+.empty-state-title{font-size:17px;font-weight:700;margin-bottom:6px}
+.empty-state-sub{font-size:13px;color:var(--ink-70)}
+
+/* ================================================================
+   MODAL
+================================================================ */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);
+  z-index:500;display:none;align-items:center;justify-content:center;padding:20px;
+}
+.modal-backdrop.open{display:flex}
+.modal{
+  background:var(--white);border-radius:var(--r);box-shadow:var(--shadow-lg);
+  width:100%;max-width:480px;max-height:90vh;overflow-y:auto;
+  animation:modalIn .2s ease;
+}
+@keyframes modalIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.modal-header{padding:22px 24px 16px;border-bottom:1px solid var(--ink-06);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:17px;font-weight:700}
+.modal-close{width:28px;height:28px;border-radius:50%;background:var(--ink-06);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;transition:background var(--transition)}
+.modal-close:hover{background:var(--ink-12)}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--ink-06);display:flex;justify-content:flex-end;gap:10px}
+
+/* ================================================================
+   DASHBOARD
+================================================================ */
+.dashboard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:1100px){.dashboard-stats{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.dashboard-stats{grid-template-columns:1fr}}
+
+.progress-ring-wrap{display:flex;align-items:center;gap:20px;padding:20px}
+.progress-ring{position:relative;flex-shrink:0}
+.progress-ring svg{transform:rotate(-90deg)}
+.progress-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column}
+.progress-ring-pct{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}
+.progress-ring-sub{font-size:10px;color:var(--ink-40)}
+.progress-ring-info{flex:1}
+.progress-ring-title{font-size:16px;font-weight:700;margin-bottom:4px}
+.progress-ring-desc{font-size:13px;color:var(--ink-70)}
+
+.timeline-bar{height:8px;background:var(--ink-06);border-radius:4px;overflow:hidden;margin:12px 0}
+.timeline-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--green-3));border-radius:4px;transition:width .6s ease}
+.timeline-steps{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-40)}
+.timeline-step.active{color:var(--green-2);font-weight:600}
+
+.announcement-list{display:flex;flex-direction:column;gap:8px}
+.announcement-item{
+  padding:12px 14px;border-radius:var(--r-sm);background:var(--page);
+  border-left:3px solid var(--green-3);font-size:13px;
+  display:flex;align-items:center;gap:10px;cursor:pointer;
+  transition:background var(--transition);
+}
+.announcement-item:hover{background:var(--page-2)}
+.ann-dot{width:7px;height:7px;background:var(--green-3);border-radius:50%;flex-shrink:0}
+
+/* ================================================================
+   AREAS / LODGES
+================================================================ */
+.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:24px;flex-wrap:wrap}
+.filter-bar input,.filter-bar select{
+  padding:9px 12px;background:var(--white);border:1px solid var(--ink-12);
+  border-radius:var(--r-sm);font-size:13px;color:var(--ink);
+  transition:border-color var(--transition);
+}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--green-2)}
+.filter-bar input{flex:1;min-width:180px}
+
+.area-card{border-radius:var(--r);overflow:hidden;background:var(--white);border:1px solid var(--ink-06);box-shadow:var(--shadow);transition:transform var(--transition),box-shadow var(--transition);cursor:pointer}
+.area-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.area-card-top{padding:18px;border-bottom:1px solid var(--ink-06)}
+.area-card-name{font-size:16px;font-weight:700;margin-bottom:4px}
+.area-card-state{font-size:12px;color:var(--ink-40);text-transform:uppercase;letter-spacing:.06em}
+.area-card-body{padding:14px 18px;display:flex;flex-direction:column;gap:8px}
+.area-info-row{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.area-info-label{color:var(--ink-40)}
+.area-info-value{font-weight:500}
+.safety-bar{height:4px;background:var(--ink-06);border-radius:2px;flex:1;margin-left:8px;overflow:hidden}
+.safety-fill{height:100%;border-radius:2px;background:var(--green-3)}
+.area-card-footer{padding:12px 18px;border-top:1px solid var(--ink-06);display:flex;justify-content:flex-end}
+
+.lodge-card{border-radius:var(--r);overflow:hidden;background:var(--white);border:1px solid var(--ink-06);box-shadow:var(--shadow);transition:all var(--transition);cursor:pointer}
+.lodge-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.lodge-img{height:160px;background:var(--page-2);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.lodge-img img{width:100%;height:100%;object-fit:cover}
+.lodge-img-placeholder{font-size:32px}
+.lodge-body{padding:16px}
+.lodge-name{font-size:15px;font-weight:700;margin-bottom:4px}
+.lodge-address{font-size:12px;color:var(--ink-40);margin-bottom:10px}
+.lodge-price{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--green-2);margin-bottom:10px}
+.lodge-price small{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:var(--ink-40)}
+.amenity-list{display:flex;flex-wrap:wrap;gap:5px}
+.amenity{padding:3px 8px;background:var(--page);border-radius:100px;font-size:11px;color:var(--ink-70)}
+
+/* DETAIL PANEL */
+.detail-panel{
+  position:fixed;top:0;right:-480px;bottom:0;width:460px;
+  background:var(--white);border-left:1px solid var(--ink-12);
+  z-index:300;overflow-y:auto;transition:right .3s ease;
+  box-shadow:-8px 0 32px rgba(0,0,0,.08);
+}
+.detail-panel.open{right:0}
+.detail-header{padding:20px 24px;border-bottom:1px solid var(--ink-06);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--white);z-index:1}
+.detail-close{width:30px;height:30px;border-radius:50%;background:var(--ink-06);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background var(--transition)}
+.detail-close:hover{background:var(--ink-12)}
+.detail-body{padding:24px}
+.detail-section{margin-bottom:24px}
+.detail-section-title{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-40);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--ink-06)}
+.detail-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--ink-06);font-size:13px}
+.detail-row:last-child{border-bottom:none}
+.detail-row-label{color:var(--ink-70)}
+.detail-row-value{font-weight:500;text-align:right;max-width:60%}
+
+/* ================================================================
+   CHECKLIST
+================================================================ */
+.journey-section{margin-bottom:28px}
+.journey-section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--ink-06);
+}
+.journey-section-title{font-size:17px;font-weight:700}
+.journey-progress{font-size:12px;color:var(--ink-40)}
+
+.checklist-items{display:flex;flex-direction:column;gap:6px}
+.check-item{
+  display:flex;align-items:center;gap:12px;padding:12px 16px;
+  background:var(--white);border-radius:var(--r-sm);border:1px solid var(--ink-06);
+  transition:all var(--transition);cursor:pointer;
+}
+.check-item:hover{border-color:var(--ink-12);background:var(--page)}
+.check-item.done{opacity:.65}
+.check-item.done .check-label{text-decoration:line-through;color:var(--ink-40)}
+.check-box{
+  width:20px;height:20px;border-radius:5px;border:1.5px solid var(--ink-30);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:all var(--transition);
+}
+.check-item.done .check-box{background:var(--green-2);border-color:var(--green-2)}
+.check-label{font-size:14px}
+.check-badge{margin-left:auto}
+
+/* ================================================================
+   CULTURE GUIDE
+================================================================ */
+.culture-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
+.culture-card{border-radius:var(--r);overflow:hidden;background:var(--white);border:1px solid var(--ink-06);box-shadow:var(--shadow);cursor:pointer;transition:all var(--transition)}
+.culture-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.culture-card-header{padding:20px;background:linear-gradient(135deg,var(--green),var(--green-2))}
+.culture-card-state{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:white;margin-bottom:4px}
+.culture-card-type{font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em}
+.culture-card-body{padding:16px}
+.culture-card-title{font-size:15px;font-weight:700;margin-bottom:6px}
+.culture-card-desc{font-size:13px;color:var(--ink-70);line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.culture-tag-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.culture-tag{padding:3px 8px;background:var(--green-bg);color:var(--green-2);border-radius:100px;font-size:11px;font-weight:500}
+
+/* ================================================================
+   BUDGET
+================================================================ */
+.budget-form{max-width:560px}
+.budget-result{margin-top:28px}
+.budget-total{
+  padding:24px;background:var(--green);border-radius:var(--r);margin-bottom:20px;
+}
+.budget-total-label{font-size:12px;color:rgba(255,255,255,.6);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.budget-total-amount{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:white;letter-spacing:-.03em}
+.budget-total-note{font-size:13px;color:rgba(255,255,255,.6);margin-top:8px}
+.budget-breakdown{display:flex;flex-direction:column;gap:2px;background:var(--ink-06);border-radius:var(--r);overflow:hidden}
+.budget-row{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;background:var(--white);font-size:14px}
+.budget-row:first-child{border-radius:var(--r) var(--r) 0 0}
+.budget-row:last-child{border-radius:0 0 var(--r) var(--r)}
+.budget-row-label{color:var(--ink-70)}
+.budget-row-value{font-weight:600;color:var(--ink)}
+.budget-row.total .budget-row-value{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--green-2)}
+.budget-row.total .budget-row-label{font-weight:600}
+.budget-alert{padding:12px 16px;border-radius:var(--r-sm);font-size:13px;margin-top:14px}
+.budget-alert.warning{background:var(--gold-bg);color:var(--gold);border:1px solid rgba(184,133,31,.2)}
+.budget-alert.danger{background:var(--red-bg);color:var(--red);border:1px solid rgba(185,50,50,.2)}
+
+/* ================================================================
+   MAP
+================================================================ */
+.map-layout{display:grid;grid-template-columns:1fr 300px;gap:20px;height:calc(100vh - var(--topbar-h) - 56px - 80px)}
+@media(max-width:900px){.map-layout{grid-template-columns:1fr;height:auto}}
+#map-container{border-radius:var(--r);overflow:hidden;border:1px solid var(--ink-12);min-height:400px}
+.map-sidebar{display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.map-legend{padding:16px}
+.map-legend-title{font-size:13px;font-weight:600;margin-bottom:10px}
+.map-legend-item{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px}
+.map-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.landmark-list{display:flex;flex-direction:column;gap:6px}
+.landmark-item{padding:10px 14px;background:var(--page);border-radius:var(--r-sm);font-size:13px;cursor:pointer;transition:background var(--transition)}
+.landmark-item:hover{background:var(--page-2)}
+.landmark-name{font-weight:500;margin-bottom:2px}
+.landmark-type{font-size:11px;color:var(--ink-40);text-transform:capitalize}
+
+/* ================================================================
+   PROFILE
+================================================================ */
+.profile-header-card{padding:24px;display:flex;align-items:center;gap:20px;margin-bottom:20px}
+.profile-avatar-lg{
+  width:72px;height:72px;background:var(--green-bg);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--green);
+  border:2px solid var(--green-border);
+}
+.profile-name{font-size:22px;font-weight:800;margin-bottom:2px}
+.profile-meta{font-size:13px;color:var(--ink-70)}
+
+/* ================================================================
+   MESSAGES
+================================================================ */
+.messages-layout{display:grid;grid-template-columns:280px 1fr;gap:0;height:calc(100vh - var(--topbar-h) - 56px - 80px);background:var(--white);border-radius:var(--r);border:1px solid var(--ink-06);overflow:hidden}
+@media(max-width:800px){.messages-layout{grid-template-columns:1fr}}
+.conv-list{border-right:1px solid var(--ink-06);overflow-y:auto}
+.conv-list-header{padding:16px;border-bottom:1px solid var(--ink-06);font-size:13px;font-weight:600}
+.conv-item{padding:14px 16px;cursor:pointer;border-bottom:1px solid var(--ink-06);transition:background var(--transition);display:flex;align-items:center;gap:10px}
+.conv-item:hover{background:var(--page)}
+.conv-item.active{background:var(--green-bg)}
+.conv-avatar{width:36px;height:36px;border-radius:50%;background:var(--page-2);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;flex-shrink:0}
+.conv-info{flex:1;min-width:0}
+.conv-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-preview{font-size:12px;color:var(--ink-40);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.unread-dot{width:8px;height:8px;background:var(--green-3);border-radius:50%;flex-shrink:0}
+
+.chat-area{display:flex;flex-direction:column}
+.chat-header{padding:14px 20px;border-bottom:1px solid var(--ink-06);display:flex;align-items:center;gap:12px}
+.chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px}
+.chat-empty{display:flex;align-items:center;justify-content:center;flex:1;color:var(--ink-40);font-size:13px}
+.msg{max-width:70%;display:flex;flex-direction:column;gap:3px}
+.msg.mine{align-self:flex-end;align-items:flex-end}
+.msg.theirs{align-self:flex-start;align-items:flex-start}
+.msg-bubble{padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5}
+.msg.mine .msg-bubble{background:var(--green);color:white;border-radius:14px 14px 4px 14px}
+.msg.theirs .msg-bubble{background:var(--page);border:1px solid var(--ink-06);border-radius:14px 14px 14px 4px}
+.msg-time{font-size:11px;color:var(--ink-40)}
+.chat-input-area{padding:14px 20px;border-top:1px solid var(--ink-06);display:flex;gap:10px}
+.chat-input{flex:1;padding:10px 14px;background:var(--page);border:1px solid var(--ink-12);border-radius:20px;font-size:14px;resize:none}
+.chat-input:focus{border-color:var(--green-2);background:var(--white)}
+.chat-send{width:38px;height:38px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:background var(--transition)}
+.chat-send:hover{background:var(--green-2)}
+
+/* ================================================================
+   SETTINGS / MISC
+================================================================ */
+.settings-section{margin-bottom:28px}
+.settings-section-title{font-size:14px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--ink-06)}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--ink-06)}
+.settings-row:last-child{border-bottom:none}
+.settings-row-info{display:flex;flex-direction:column;gap:2px}
+.settings-row-label{font-size:14px;font-weight:500}
+.settings-row-desc{font-size:12px;color:var(--ink-40)}
+.toggle-wrap{position:relative;width:36px;height:20px}
+.toggle-input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{
+  position:absolute;inset:0;background:var(--ink-12);border-radius:100px;
+  cursor:pointer;transition:background var(--transition);
+}
+.toggle-track::after{
+  content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;
+  background:white;border-radius:50%;transition:transform var(--transition);
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-input:checked ~ .toggle-track{background:var(--green-2)}
+.toggle-input:checked ~ .toggle-track::after{transform:translateX(16px)}
+
+/* ================================================================
+   RESPONSIVE SIDEBAR
+================================================================ */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:190}
+.menu-toggle{display:none;width:36px;height:36px;border-radius:var(--r-sm);background:var(--ink-06);border:none;cursor:pointer;align-items:center;justify-content:center}
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%);transition:transform .3s ease}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.open{display:block}
+  .main-area{margin-left:0}
+  .menu-toggle{display:flex}
+}
+
+/* ================================================================
+   ANIMATIONS
+================================================================ */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .25s ease}
+.slide-up{animation:slideUp .3s ease}
+
+/* ================================================================
+   MISC UTILS
+================================================================ */
+.text-muted{color:var(--ink-70)}
+.text-sm{font-size:13px}
+.text-xs{font-size:11px}
+.font-bold{font-weight:700}
+.mt-4{margin-top:4px}.mt-8{margin-top:8px}.mt-12{margin-top:12px}.mt-16{margin-top:16px}.mt-24{margin-top:24px}
+.mb-4{margin-bottom:4px}.mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}.mb-24{margin-bottom:24px}
+.gap-8{gap:8px}.gap-12{gap:12px}
+.flex{display:flex}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-between{justify-content:space-between}.flex-1{flex:1}
+.w-full{width:100%}
+.hidden{display:none!important}
+.select-none{user-select:none}
+.truncate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Leaflet popup override */
+.leaflet-popup-content-wrapper{border-radius:var(--r-sm)!important;box-shadow:var(--shadow-md)!important;font-family:'DM Sans',sans-serif!important}
+.leaflet-popup-content{font-size:13px!important;margin:10px 14px!important}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+  TOAST CONTAINER
+============================================================ -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ============================================================
+  DETAIL PANEL (areas/lodges)
+============================================================ -->
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-header">
+    <h3 class="detail-title" id="detailTitle">Details</h3>
+    <button class="detail-close" onclick="closeDetail()">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M14 2L2 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="detail-body" id="detailBody"></div>
+</div>
+
+<!-- ============================================================
+  PAGE: LOGIN
+============================================================ -->
+<div class="page active" id="page-login">
+  <div class="auth-shell">
+    <div class="auth-brand">
+      <div class="brand-logo">
+        <div class="brand-logo-mark">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="white" opacity=".9"/><path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="brand-logo-text">Corper<span>Compass</span></span>
+      </div>
+      <div>
+        <h1 class="brand-headline">Navigate your<br><em>service year</em><br>with clarity.</h1>
+        <p class="brand-tagline">Housing, culture, budget tools and more — built for every corper in every state.</p>
+      </div>
+      <div class="brand-features">
+        <div class="brand-feat"><div class="brand-feat-dot"></div>Verified lodge listings</div>
+        <div class="brand-feat"><div class="brand-feat-dot"></div>State-by-state cultural guides</div>
+        <div class="brand-feat"><div class="brand-feat-dot"></div>Pre-arrival relocation checklist</div>
+        <div class="brand-feat"><div class="brand-feat-dot"></div>Monthly budget estimator</div>
+      </div>
+    </div>
+    <div class="auth-form-wrap">
+      <h2 class="auth-form-title">Welcome back</h2>
+      <p class="auth-form-sub">No account? <a href="#" onclick="showPage('page-register')">Create one free →</a></p>
+      <div id="login-error" class="alert alert-error hidden">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v4M8 11h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span id="login-error-text"></span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input type="email" id="login-email" class="form-input" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="login-password" class="form-input" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <button class="btn btn-primary btn-full btn-lg mt-8" id="login-btn" onclick="doLogin()">
+        Sign in
+      </button>
+      <div class="divider">or</div>
+      <button class="btn btn-ghost btn-full" onclick="showPage('page-register')">Create account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+  PAGE: REGISTER
+============================================================ -->
+<div class="page" id="page-register">
+  <div class="auth-shell">
+    <div class="auth-brand">
+      <div class="brand-logo">
+        <div class="brand-logo-mark">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="white" opacity=".9"/><path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="brand-logo-text">Corper<span>Compass</span></span>
+      </div>
+      <div>
+        <h1 class="brand-headline">Start your<br><em>service year</em><br>informed.</h1>
+        <p class="brand-tagline">Join thousands of corpers who navigate their deployment with confidence.</p>
+      </div>
+      <div class="brand-features">
+        <div class="brand-feat"><div class="brand-feat-dot"></div>Free to use, always</div>
+        <div class="brand-feat"><div class="brand-feat-dot"></div>No payments or bookings</div>
+        <div class="brand-feat"><div class="brand-feat-dot"></div>Reliable, verified information</div>
+      </div>
+    </div>
+    <div class="auth-form-wrap">
+      <h2 class="auth-form-title">Create account</h2>
+      <p class="auth-form-sub">Already have one? <a href="#" onclick="showPage('page-login')">Sign in →</a></p>
+      <div id="reg-error" class="alert alert-error hidden">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v4M8 11h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span id="reg-error-text"></span>
+      </div>
+      <div class="grid-2" style="gap:14px">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">First name</label>
+          <input type="text" id="reg-fname" class="form-input" placeholder="Ada"/>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Last name</label>
+          <input type="text" id="reg-lname" class="form-input" placeholder="Okonkwo"/>
+        </div>
+      </div>
+      <div class="form-group mt-16">
+        <label class="form-label">Email address</label>
+        <input type="email" id="reg-email" class="form-input" placeholder="you@example.com"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="reg-password" class="form-input" placeholder="Min. 8 characters"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Posting state <span style="color:var(--ink-40)">(optional)</span></label>
+        <select id="reg-state" class="form-input">
+          <option value="">Select your deployment state</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-full btn-lg" id="reg-btn" onclick="doRegister()">Create account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+  APP SHELL
+============================================================ -->
+<div class="app-shell" id="appShell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="white" opacity=".9"/><path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <span class="sidebar-logo-text">Corper<span>Compass</span></span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <div class="nav-item active" onclick="navigateTo('dashboard')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="navigateTo('map')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>
+        Map
+      </div>
+      <div class="nav-item" onclick="navigateTo('areas')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 22V12h6v10" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Areas
+      </div>
+      <div class="nav-item" onclick="navigateTo('lodges')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" stroke-width="1.5"/><path d="M12 12v3M10 14h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Housing
+      </div>
+
+      <div class="nav-section-label">Tools</div>
+      <div class="nav-item" onclick="navigateTo('checklist')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Checklist
+      </div>
+      <div class="nav-item" onclick="navigateTo('budget')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 12V7H5a2 2 0 010-4h14v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 5v14a2 2 0 002 2h16v-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 12a2 2 0 000 4h4v-4h-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Budget
+      </div>
+      <div class="nav-item" onclick="navigateTo('culture')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Culture Guide
+      </div>
+
+      <div class="nav-section-label">Connect</div>
+      <div class="nav-item" onclick="navigateTo('messages')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Messages
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="nav-item" onclick="navigateTo('profile')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Profile
+      </div>
+      <div class="nav-item" onclick="navigateTo('settings')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg>
+        Settings
+      </div>
+      <div class="sidebar-user" onclick="navigateTo('profile')">
+        <div class="user-avatar" id="sidebarAvatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebarName">Loading…</div>
+          <div class="user-role" id="sidebarRole">corper</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- SIDEBAR OVERLAY -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="flex items-center gap-12">
+        <button class="menu-toggle" onclick="openSidebar()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <h1 class="topbar-title" id="topbarTitle">Dashboard</h1>
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="text" placeholder="Search…" id="globalSearch" onkeyup="handleSearch(this.value)"/>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="doLogout()">Log out</button>
+      </div>
+    </div>
+
+    <!-- APP PAGES -->
+    <!-- DASHBOARD -->
+    <div class="app-page active" id="app-dashboard">
+      <div class="page-content fade-in">
+        <div class="page-header">
+          <h2 class="page-title" id="dash-greeting">Welcome back 👋</h2>
+          <p class="page-sub">Here's an overview of your NYSC service year</p>
+        </div>
+
+        <div class="dashboard-stats" id="dashStats">
+          <div class="card card-pad stat-card">
+            <div class="stat-label">Clearance status</div>
+            <div class="stat-value green" id="dash-clearance">—</div>
+          </div>
+          <div class="card card-pad stat-card">
+            <div class="stat-label">Next CDS date</div>
+            <div class="stat-value" id="dash-cds">—</div>
+          </div>
+          <div class="card card-pad stat-card">
+            <div class="stat-label">Deployment state</div>
+            <div class="stat-value" style="font-size:18px" id="dash-state">—</div>
+          </div>
+          <div class="card card-pad stat-card">
+            <div class="stat-label">Checklist progress</div>
+            <div class="stat-value green" id="dash-progress">—</div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:20px">
+          <div class="card card-pad">
+            <div class="flex items-center justify-between mb-12">
+              <h3 style="font-size:15px;font-weight:700">Upcoming tasks</h3>
+              <a href="#" onclick="navigateTo('checklist')" style="font-size:12px;color:var(--green-2)">View all →</a>
+            </div>
+            <div id="dashUpcomingTasks">
+              <div class="loading-wrap" style="padding:24px"><div class="spinner"></div></div>
+            </div>
+          </div>
+          <div class="card card-pad">
+            <div class="flex items-center justify-between mb-12">
+              <h3 style="font-size:15px;font-weight:700">Service timeline</h3>
+            </div>
+            <div id="dashTimeline">
+              <div class="timeline-bar"><div class="timeline-fill" id="timelineFill" style="width:0%"></div></div>
+              <div class="timeline-steps">
+                <span class="timeline-step">Camp</span>
+                <span class="timeline-step">CDS</span>
+                <span class="timeline-step active">Mid</span>
+                <span class="timeline-step">POP</span>
+              </div>
+              <div class="mt-12 text-sm text-muted" id="timelineDesc">Track your progress through the service year.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div class="app-page" id="app-map">
+      <div class="page-content fade-in">
+        <div class="page-header">
+          <h2 class="page-title">Interactive Map</h2>
+          <p class="page-sub">Area markers and lodge locations across Nigeria</p>
+        </div>
+        <div class="map-layout">
+          <div id="map-container"></div>
+          <div class="map-sidebar">
+            <div class="card card-sm-pad map-legend">
+              <div class="map-legend-title">Legend</div>
+              <div class="map-legend-item"><div class="map-legend-dot" style="background:#1b4d30"></div>Areas / Zones</div>
+              <div class="map-legend-item"><div class="map-legend-dot" style="background:#b8851f"></div>Lodge listings</div>
+              <div class="map-legend-item"><div class="map-legend-dot" style="background:#1d5fa8"></div>Secretariats</div>
+            </div>
+            <div class="card card-sm-pad">
+              <div class="map-legend-title">Landmarks</div>
+              <div class="landmark-list" id="landmarkList">
+                <div class="loading-wrap" style="padding:16px"><div class="spinner spinner-sm"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AREAS -->
+    <div class="app-page" id="app-areas">
+      <div class="page-content fade-in">
+        <div class="page-header">
+          <h2 class="page-title">Areas</h2>
+          <p class="page-sub">Browse and explore areas across all deployment states</p>
+        </div>
+        <div class="filter-bar">
+          <input type="text" id="areaSearch" placeholder="Search areas or states…" oninput="filterAreas()" />
+          <select id="areaStateFilter" onchange="filterAreas()">
+            <option value="">All states</option>
+          </select>
+        </div>
+        <div class="grid-3" id="areasGrid">
+          <div class="loading-wrap" style="grid-column:1/-1;padding:48px"><div class="spinner spinner-lg"></div><div class="loading-text">Loading areas…</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LODGES -->
+    <div class="app-page" id="app-lodges">
+      <div class="page-content fade-in">
+        <div class="page-header">
+          <h2 class="page-title">Housing</h2>
+          <p class="page-sub">Verified lodge listings near PPAs</p>
+        </div>
+        <div class="filter-bar">
+          <input type="text" id="lodgeSearch" placeholder="Search lodges…" oninput="filterLodges()"/>
+          <select id="lodgeStateFilter" onchange="filterLodges()">
+            <option value="">All states</option>
+          </select>
+          <select id="lodgeSortBy" onchange="filterLodges()">
+            <option value="">Sort by</option>
+            <option value="price-asc">Price: Low → High</option>
+            <option value="price-desc">Price: High → Low</option>
+          </select>
+        </div>
+        <div class="grid-3" id="lodgesGrid">
+          <div class="loading-wrap" style="grid-column:1/-1;padding:48px"><div class="spinner spinner-lg"></div><div class="loading-text">Loading lodges…</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHECKLIST -->
+    <div class="app-page" id="app-checklist">
+      <div class="page-content fade-in">
+        <div class="flex items-center justify-between mb-24" style="flex-wrap:wrap;gap:12px">
+          <div>
+            <h2 class="page-title">Relocation Checklist</h2>
+            <p class="page-sub">Track your pre- and post-arrival tasks</p>
+          </div>
+          <div class="card card-sm-pad flex items-center gap-12" style="padding:12px 18px">
+            <div>
+              <div class="text-xs text-muted">Overall progress</div>
+              <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--green-2)" id="checklistPctDisplay">0%</div>
+            </div>
+            <svg width="48" height="48" viewBox="0 0 48 48">
+              <circle cx="24" cy="24" r="20" fill="none" stroke="var(--ink-06)" stroke-width="4"/>
+              <circle cx="24" cy="24" r="20" fill="none" stroke="var(--green-3)" stroke-width="4" stroke-linecap="round" stroke-dasharray="125.6" id="checklistRing" stroke-dashoffset="125.6" style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset .5s ease"/>
+            </svg>
+          </div>
+        </div>
+        <div id="checklistContent">
+          <div class="loading-wrap"><div class="spinner spinner-lg"></div><div class="loading-text">Loading checklist…</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BUDGET -->
+    <div class="app-page" id="app-budget">
+      <div class="page-content fade-in">
+        <div class="page-header">
+          <h2 class="page-title">Budget Estimator</h2>
+          <p class="page-sub">Calculate your estimated monthly expenses for your deployment state</p>
+        </div>
+        <div class="grid-2" style="align-items:start">
+          <div class="card card-pad budget-form">
+            <h3 style="font-size:15px;font-weight:700;margin-bottom:18px">Enter your details</h3>
+            <div class="form-group">
+              <label class="form-label">Deployment state</label>
+              <select id="budget-state" class="form-input">
+                <option value="">Select state…</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Monthly income / allowance (₦)</label>
+              <input type="number" id="budget-income" class="form-input" placeholder="e.g. 33000" value="33000"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Accommodation budget (₦ / month)</label>
+              <input type="number" id="budget-accommodation" class="form-input" placeholder="e.g. 15000"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Transport budget (₦ / month)</label>
+              <input type="number" id="budget-transport" class="form-input" placeholder="e.g. 5000"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Food budget (₦ / month)</label>
+              <input type="number" id="budget-food" class="form-input" placeholder="e.g. 10000"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Other expenses (₦ / month)</label>
+              <input type="number" id="budget-other" class="form-input" placeholder="e.g. 3000"/>
+            </div>
+            <button class="btn btn-primary btn-full mt-8" onclick="estimateBudget()">Calculate budget</button>
+          </div>
+          <div id="budget-result-wrap">
+            <div class="empty-state">
+              <div class="empty-state-icon">💰</div>
+              <div class="empty-state-title">Fill in your details</div>
+              <div class="empty-state-sub">Your budget breakdown will appear here</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CULTURE -->
+    <div class="app-page" id="app-culture">
+      <div class="page-content fade-in">
+        <div class="page-header">
+          <h2 class="page-title">Culture Guide</h2>
+          <p class="page-sub">Local languages, festivals, customs and etiquette by state</p>
+        </div>
+        <div class="filter-bar">
+          <input type="text" id="cultureSearch" placeholder="Search by state or topic…" oninput="filterCulture()"/>
+          <select id="cultureTypeFilter" onchange="filterCulture()">
+            <option value="">All types</option>
+            <option value="language">Language</option>
+            <option value="food">Food</option>
+            <option value="festival">Festival</option>
+            <option value="etiquette">Etiquette</option>
+            <option value="safety">Safety</option>
+          </select>
+        </div>
+        <div class="culture-grid" id="cultureGrid">
+          <div class="loading-wrap" style="grid-column:1/-1;padding:48px"><div class="spinner spinner-lg"></div><div class="loading-text">Loading culture guides…</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="app-page" id="app-messages">
+      <div class="page-content fade-in">
+        <div class="page-header">
+          <h2 class="page-title">Messages</h2>
+          <p class="page-sub">Connect with other corpers</p>
+        </div>
+        <div class="messages-layout card">
+          <div class="conv-list">
+            <div class="conv-list-header flex items-center justify-between">
+              Conversations
+              <button class="btn btn-sm btn-ghost" onclick="showNewMessageModal()">+ New</button>
+            </div>
+            <div id="convList">
+              <div class="loading-wrap" style="padding:24px"><div class="spinner spinner-sm"></div></div>
+            </div>
+          </div>
+          <div class="chat-area" id="chatArea">
+            <div class="chat-empty">Select a conversation to start chatting</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="app-page" id="app-profile">
+      <div class="page-content fade-in">
+        <div class="page-header">
+          <h2 class="page-title">Profile</h2>
+          <p class="page-sub">Manage your personal and NYSC service information</p>
+        </div>
+        <div class="card profile-header-card mb-24">
+          <div class="profile-avatar-lg" id="profileAvatarLg">?</div>
+          <div>
+            <div class="profile-name" id="profileNameLg">—</div>
+            <div class="profile-meta" id="profileMeta">Corps member</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openEditProfileModal()">Edit profile</button>
+        </div>
+        <div class="grid-2">
+          <div class="card card-pad">
+            <div class="detail-section-title" style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-40);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--ink-06)">Personal information</div>
+            <div id="profilePersonal">
+              <div class="loading-wrap" style="padding:24px"><div class="spinner spinner-sm"></div></div>
+            </div>
+          </div>
+          <div class="card card-pad">
+            <div class="detail-section-title" style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-40);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--ink-06)">NYSC service information</div>
+            <div id="profileNYSC">
+              <div class="loading-wrap" style="padding:24px"><div class="spinner spinner-sm"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="app-page" id="app-settings">
+      <div class="page-content fade-in">
+        <div class="page-header">
+          <h2 class="page-title">Settings</h2>
+          <p class="page-sub">Manage your account preferences</p>
+        </div>
+        <div style="max-width:600px">
+          <div class="card card-pad mb-16">
+            <div class="settings-section-title">Account</div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <div class="settings-row-label">Change password</div>
+                <div class="settings-row-desc">Update your account password</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="showChangePasswordModal()">Update</button>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <div class="settings-row-label">Email address</div>
+                <div class="settings-row-desc" id="settingsEmail">—</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="openEditProfileModal()">Edit</button>
+            </div>
+          </div>
+          <div class="card card-pad mb-16">
+            <div class="settings-section-title">Notifications</div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <div class="settings-row-label">Email notifications</div>
+                <div class="settings-row-desc">Receive updates via email</div>
+              </div>
+              <label class="toggle-wrap"><input type="checkbox" class="toggle-input" checked/><div class="toggle-track"></div></label>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <div class="settings-row-label">CDS reminders</div>
+                <div class="settings-row-desc">Get reminded before CDS dates</div>
+              </div>
+              <label class="toggle-wrap"><input type="checkbox" class="toggle-input" checked/><div class="toggle-track"></div></label>
+            </div>
+          </div>
+          <div class="card card-pad">
+            <div class="settings-section-title">Danger zone</div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <div class="settings-row-label">Log out</div>
+                <div class="settings-row-desc">Sign out of your account</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="doLogout()">Log out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-area -->
+</div><!-- /app-shell -->
+
+<!-- ============================================================
+  MODALS
+============================================================ -->
+<!-- Edit Profile -->
+<div class="modal-backdrop" id="editProfileModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit profile</h3>
+      <button class="modal-close" onclick="closeModal('editProfileModal')">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M14 2L2 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Phone number</label>
+        <input type="tel" id="edit-phone" class="form-input" placeholder="+234…"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Posting state</label>
+        <select id="edit-state" class="form-input"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">State code</label>
+        <input type="text" id="edit-statecode" class="form-input" placeholder="e.g. AB/24/001"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">PPA</label>
+        <input type="text" id="edit-ppa" class="form-input" placeholder="Your Place of Primary Assignment"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editProfileModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProfile()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Message -->
+<div class="modal-backdrop" id="newMessageModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">New message</h3>
+      <button class="modal-close" onclick="closeModal('newMessageModal')">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M14 2L2 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Recipient User ID</label>
+        <input type="text" id="msg-recipient" class="form-input" placeholder="Paste user ID…"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message</label>
+        <textarea id="msg-body" class="form-input" rows="4" placeholder="Type your message…" style="resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('newMessageModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="sendNewMessage()">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Culture Detail -->
+<div class="modal-backdrop" id="cultureDetailModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3 class="modal-title" id="cultureDetailTitle">—</h3>
+      <button class="modal-close" onclick="closeModal('cultureDetailModal')">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M14 2L2 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="cultureDetailBody"></div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   ⚙️  CONFIG — CHANGE BASE_URL TO MATCH YOUR BACKEND
+================================================================ */
+const CONFIG = {
+  BASE_URL: 'http://localhost:5001/api',
+  BASE_URL: ''
+  // Examples:
+  // BASE_URL: 'https://your-app.railway.app/api'
+  // BASE_URL: 'https://your-app.onrender.com/api'
+};
+
+const NIGERIA_STATES = [
+  'Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','Benue','Borno',
+  'Cross River','Delta','Ebonyi','Edo','Ekiti','Enugu','FCT','Gombe','Imo',
+  'Jigawa','Kaduna','Kano','Katsina','Kebbi','Kogi','Kwara','Lagos','Nasarawa',
+  'Niger','Ogun','Ondo','Osun','Oyo','Plateau','Rivers','Sokoto','Taraba',
+  'Yobe','Zamfara'
+];
+
+/* ================================================================
+   STATE
+================================================================ */
+let APP = {
+  user: null,
+  token: null,
+  areas: [],
+  lodges: [],
+  culture: [],
+  messages: [],
+  checklist: null,
+  progress: {},
+  currentConv: null,
+  map: null,
+};
+
+/* ================================================================
+   CORE API
+================================================================ */
+async function api(method, path, body = null, auth = true) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (auth && APP.token) headers['Authorization'] = `Bearer ${APP.token}`;
+  const opts = { method, headers, credentials: 'include' };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const res = await fetch(CONFIG.BASE_URL + path, opts);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.error || `Error ${res.status}`);
+    return data;
+  } catch(e) {
+    throw e;
+  }
+}
+const GET  = (path, auth=true) => api('GET', path, null, auth);
+const POST = (path, body, auth=true) => api('POST', path, body, auth);
+const PUT  = (path, body, auth=true) => api('PUT', path, body, auth);
+const PATCH = (path, body, auth=true) => api('PATCH', path, body, auth);
+
+/* ================================================================
+   TOKEN STORAGE
+================================================================ */
+function saveToken(token) {
+  APP.token = token;
+  localStorage.setItem('cc_token', token);
+}
+function loadToken() {
+  APP.token = localStorage.getItem('cc_token');
+  return !!APP.token;
+}
+function clearToken() {
+  APP.token = null;
+  localStorage.removeItem('cc_token');
+}
+
+/* ================================================================
+   PAGE / NAV
+================================================================ */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const p = document.getElementById(id);
+  if (p) p.classList.add('active');
+}
+
+function showAppShell() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('appShell').classList.add('active');
+}
+
+const PAGE_TITLES = {
+  dashboard:'Dashboard', map:'Map', areas:'Areas', lodges:'Housing',
+  checklist:'Checklist', budget:'Budget', culture:'Culture Guide',
+  messages:'Messages', profile:'Profile', settings:'Settings'
+};
+
+function navigateTo(page) {
+  document.querySelectorAll('.app-page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById('app-' + page);
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') === `navigateTo('${page}')`) n.classList.add('active');
+  });
+  document.getElementById('topbarTitle').textContent = PAGE_TITLES[page] || page;
+  closeSidebar();
+  // Lazy load data
+  if (page === 'map' && !APP.map) initMap();
+  if (page === 'areas' && APP.areas.length === 0) loadAreas();
+  if (page === 'lodges' && APP.lodges.length === 0) loadLodges();
+  if (page === 'checklist') loadChecklist();
+  if (page === 'culture' && APP.culture.length === 0) loadCulture();
+  if (page === 'messages') {
+    loadMessages();
+    startMessagesAutoRefresh();
+  } else {
+    stopMessagesAutoRefresh();
+  }
+  if (page === 'profile') loadProfile();
+  if (page === 'settings') loadSettingsPage();
+  if (page === 'budget') initBudgetPage();
+}
+
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+/* ================================================================
+   TOAST
+================================================================ */
+function toast(msg, type = '') {
+  const wrap = document.getElementById('toastWrap');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+/* ================================================================
+   MODAL
+================================================================ */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+/* ================================================================
+   DETAIL PANEL
+================================================================ */
+function openDetail(title, html) {
+  document.getElementById('detailTitle').textContent = title;
+  document.getElementById('detailBody').innerHTML = html;
+  document.getElementById('detailPanel').classList.add('open');
+}
+function closeDetail() { document.getElementById('detailPanel').classList.remove('open'); }
+
+/* ================================================================
+   AUTH
+================================================================ */
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const errText = document.getElementById('login-error-text');
+  const btn = document.getElementById('login-btn');
+  errEl.classList.add('hidden');
+  if (!email || !password) { showAuthError('login', 'Please enter email and password.'); return; }
+  btn.disabled = true; btn.innerHTML = '<div class="spinner spinner-sm" style="border-color:rgba(255,255,255,.3);border-top-color:white"></div> Signing in…';
+  try {
+    console.log('Attempting login with:', email);
+    const data = await POST('/auth/login', { email, password }, false);
+    console.log('Login response:', data);
+    const token = data.token || data.data?.token;
+    if (token) saveToken(token);
+    APP.user = data.user || data.data?.user || data;
+    await initApp();
+  } catch(e) {
+    console.error('Login error:', e);
+    showAuthError('login', e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+}
+
+async function doRegister() {
+  const firstName = document.getElementById('reg-fname').value.trim();
+  const lastName = document.getElementById('reg-lname').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const postedState = document.getElementById('reg-state').value;
+  const btn = document.getElementById('reg-btn');
+  if (!firstName || !email || !password) { showAuthError('reg', 'Please fill in all required fields.'); return; }
+  if (password.length < 8) { showAuthError('reg', 'Password must be at least 8 characters.'); return; }
+  btn.disabled = true; btn.innerHTML = '<div class="spinner spinner-sm" style="border-color:rgba(255,255,255,.3);border-top-color:white"></div> Creating account…';
+  try {
+    const name = `${firstName} ${lastName}`.trim();
+    const payload = { name, email, password };
+    if (postedState) payload.postedState = postedState;
+    const data = await POST('/auth/register', payload, false);
+    const token = data.token || data.data?.token;
+    if (token) saveToken(token);
+    APP.user = data.user || data.data?.user || data;
+    await initApp();
+  } catch(e) {
+    showAuthError('reg', e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create account';
+  }
+}
+
+function showAuthError(prefix, msg) {
+  const el = document.getElementById(`${prefix}-error`);
+  document.getElementById(`${prefix}-error-text`).textContent = msg;
+  el.classList.remove('hidden');
+}
+
+async function doLogout() {
+  clearToken();
+  APP.user = null;
+  APP.areas = []; APP.lodges = []; APP.culture = [];
+  document.getElementById('appShell').classList.remove('active');
+  showPage('page-login');
+  try { await GET('/auth/logout').catch(()=>{}); } catch(e) {}
+}
+
+/* ================================================================
+   APP INIT
+================================================================ */
+async function initApp() {
+  if (!APP.user) {
+    try {
+      const data = await GET('/auth/me');
+      APP.user = data.user || data.data || data;
+    } catch(e) {
+      clearToken(); showPage('page-login'); return;
+    }
+  }
+  updateSidebarUser();
+  showAppShell();
+  navigateTo('dashboard');
+  loadDashboard();
+}
+
+function updateSidebarUser() {
+  const u = APP.user;
+  if (!u) return;
+  const name = u.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : (u.name || u.email || '?');
+  const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('sidebarAvatar').textContent = initials;
+  document.getElementById('sidebarName').textContent = name;
+  document.getElementById('sidebarRole').textContent = u.role || 'corper';
+  document.getElementById('settingsEmail').textContent = u.email || '—';
+}
+
+/* ================================================================
+   DASHBOARD
+================================================================ */
+async function loadDashboard() {
+  const u = APP.user;
+  const name = u?.firstName || u?.name?.split(' ')[0] || 'Corper';
+  document.getElementById('dash-greeting').textContent = `Welcome back, ${name} 👋`;
+  document.getElementById('dash-clearance').textContent = 'Cleared ✓';
+  document.getElementById('dash-cds').textContent = 'Mar 31';
+  // Load profile to get posting state
+  try {
+    const prof = await GET('/users/profile');
+    const profile = prof.profile || prof.data || prof;
+    document.getElementById('dash-state').textContent = profile?.postedState || u?.postedState || '—';
+  } catch(e) {
+    document.getElementById('dash-state').textContent = u?.postedState || '—';
+  }
+
+  // Checklist progress for dashboard
+  try {
+    const prog = await GET('/checklist/progress');
+    const pct = prog.percentage || prog.data?.percentage || 0;
+    document.getElementById('dash-progress').textContent = `${Math.round(pct)}%`;
+    document.getElementById('timelineFill').style.width = `${Math.min(pct,100)}%`;
+  } catch(e) {
+    document.getElementById('dash-progress').textContent = '—';
+  }
+
+  // Upcoming tasks
+  try {
+    const data = await GET('/checklist/journey');
+    const sections = data.sections || data.data?.sections || data || [];
+    let items = [];
+    sections.forEach(s => { if (s.items) items = items.concat(s.items); });
+    const pending = items.filter(i => !i.completed).slice(0,4);
+    const container = document.getElementById('dashUpcomingTasks');
+    if (pending.length === 0) {
+      container.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-state-icon">🎉</div><div class="empty-state-title">All caught up!</div></div>`;
+    } else {
+      container.innerHTML = pending.map(i => `
+        <div class="announcement-item" onclick="navigateTo('checklist')">
+          <div class="ann-dot"></div>
+          <span style="font-size:13px">${i.title || i.name || i.text}</span>
+        </div>`).join('');
+    }
+  } catch(e) {
+    document.getElementById('dashUpcomingTasks').innerHTML = `<p class="text-sm text-muted">Could not load tasks.</p>`;
+  }
+}
+
+/* ================================================================
+   AREAS
+================================================================ */
+async function loadAreas() {
+  try {
+    const data = await GET('/areas', false);
+    APP.areas = data.areas || data.data || data || [];
+    populateStateFilter('areaStateFilter', APP.areas, 'state');
+    renderAreas(APP.areas);
+    renderAreaAdminButton();
+  } catch(e) {
+    document.getElementById('areasGrid').innerHTML = `<div class="loading-wrap" style="grid-column:1/-1"><div class="alert alert-error">Failed to load areas: ${e.message}</div></div>`;
+  }
+}
+
+function renderAreaAdminButton() {
+  if (APP.user?.role !== 'admin') return;
+  const grid = document.getElementById('areasGrid');
+  if (!grid || grid.querySelector('.btn-add-area')) return;
+  const wrapper = document.createElement('div');
+  wrapper.style.gridColumn = '1/-1';
+  wrapper.style.marginBottom = '20px';
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-primary btn-add-area';
+  btn.textContent = '+ Add area';
+  btn.style.width = '100%';
+  btn.onclick = openAddAreaModal;
+  wrapper.appendChild(btn);
+  grid.insertBefore(wrapper, grid.firstChild);
+}
+
+function openAddAreaModal() {
+  const name = prompt('Area name:', '');
+  if (!name) return;
+  const state = prompt('State:', '');
+  if (!state) return;
+  const lga = prompt('LGA (optional):', '');
+  const type = prompt('Type (urban/rural etc, optional):', '');
+  const transport = prompt('Transport info (optional):', '');
+  const minRent = parseInt(prompt('Min rent (₦, optional):', '0'), 10) || 0;
+  const maxRent = parseInt(prompt('Max rent (₦, optional):', '0'), 10) || 0;
+  const safetyRating = parseFloat(prompt('Safety rating (0-10, optional):', '5'));
+  const lifestyle = prompt('Lifestyle (optional):', '');
+  const description = prompt('Description (optional):', '');
+
+  const area = {
+    name,
+    state,
+    lga: lga || undefined,
+    type: type || undefined,
+    transport: transport || undefined,
+    minRent: minRent || undefined,
+    maxRent: maxRent || undefined,
+    rentRange: (minRent || maxRent) ? { min: minRent || undefined, max: maxRent || undefined } : undefined,
+    safetyRating: Number.isFinite(safetyRating) ? safetyRating : undefined,
+    lifestyle: lifestyle || undefined,
+    description: description || undefined,
+    location: { type: 'Point', coordinates: [0, 0] },
+  };
+
+  addArea(area);
+}
+
+async function addArea(data) {
+  try {
+    await POST('/areas', data);
+    toast('Area added!', 'success');
+    loadAreas();
+  } catch(e) {
+    toast('Failed to add area: ' + e.message, 'error');
+  }
+}
+
+function renderAreas(areas) {
+  const grid = document.getElementById('areasGrid');
+  if (!areas.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1"><div class="empty-state"><div class="empty-state-icon">🏘️</div><div class="empty-state-title">No areas found</div></div></div>`;
+    return;
+  }
+  grid.innerHTML = areas.map(a => {
+    const safety = a.safetyRating || a.safety_rating || 5;
+    const pct = (safety / 10) * 100;
+    const rentMin = a.rentRange?.min || a.minRent || '—';
+    const rentMax = a.rentRange?.max || a.maxRent || '—';
+    return `
+    <div class="area-card" onclick="openAreaDetail('${a._id}')">
+      <div class="area-card-top">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="area-card-name">${a.name}</div>
+            <div class="area-card-state">${a.state || ''}</div>
+          </div>
+          <div class="badge badge-${safety >= 7 ? 'green' : safety >= 4 ? 'gold' : 'red'}">
+            ${safety >= 7 ? 'Safe' : safety >= 4 ? 'Moderate' : 'Caution'}
+          </div>
+        </div>
+      </div>
+      <div class="area-card-body">
+        <div class="area-info-row">
+          <span class="area-info-label">Safety</span>
+          <div class="flex items-center gap-8" style="flex:1;justify-content:flex-end">
+            <span class="area-info-value">${safety}/10</span>
+            <div class="safety-bar"><div class="safety-fill" style="width:${pct}%"></div></div>
+          </div>
+        </div>
+        <div class="area-info-row">
+          <span class="area-info-label">Rent range</span>
+          <span class="area-info-value">₦${fmt(rentMin)} – ₦${fmt(rentMax)}</span>
+        </div>
+        ${a.transport ? `<div class="area-info-row"><span class="area-info-label">Transport</span><span class="area-info-value" style="max-width:55%;text-align:right;font-size:12px">${a.transport}</span></div>` : ''}
+      </div>
+      <div class="area-card-footer">
+        <span style="font-size:12px;color:var(--green-2)">View details →</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterAreas() {
+  const q = document.getElementById('areaSearch').value.toLowerCase();
+  const state = document.getElementById('areaStateFilter').value;
+  let filtered = APP.areas;
+  if (q) filtered = filtered.filter(a => (a.name+a.state).toLowerCase().includes(q));
+  if (state) filtered = filtered.filter(a => a.state === state);
+  renderAreas(filtered);
+}
+
+async function openAreaDetail(id) {
+  const area = APP.areas.find(a => a._id === id);
+  if (!area) return;
+  let a = area;
+  try { const d = await GET(`/areas/${id}`, false); a = d.area || d.data || d; } catch(e) {}
+  openDetail(a.name, `
+    <div class="detail-section">
+      <div class="detail-section-title">Location</div>
+      ${detailRow('State', a.state)}
+      ${detailRow('LGA', a.lga || '—')}
+      ${detailRow('Type', a.type || '—')}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Cost of living</div>
+      ${detailRow('Min rent', `₦${fmt(a.rentRange?.min || a.minRent)}`)}
+      ${detailRow('Max rent', `₦${fmt(a.rentRange?.max || a.maxRent)}`)}
+      ${detailRow('Transport', a.transport || '—')}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Lifestyle & safety</div>
+      ${detailRow('Safety rating', `${a.safetyRating || a.safety_rating || '—'}/10`)}
+      ${detailRow('Lifestyle', a.lifestyle || '—')}
+    </div>
+    ${a.description ? `<div class="detail-section"><div class="detail-section-title">About</div><p style="font-size:13px;color:var(--ink-70);line-height:1.7">${a.description}</p></div>` : ''}
+  `);
+}
+
+/* ================================================================
+   LODGES
+================================================================ */
+async function loadLodges() {
+  try {
+    const data = await GET('/lodges', false);
+    APP.lodges = data.lodges || data.data || data || [];
+    populateStateFilter('lodgeStateFilter', APP.lodges, 'state');
+    renderLodges(APP.lodges);
+    renderLodgeAdminButton();
+  } catch(e) {
+    document.getElementById('lodgesGrid').innerHTML = `<div class="loading-wrap" style="grid-column:1/-1"><div class="alert alert-error">Failed to load lodges: ${e.message}</div></div>`;
+  }
+}
+
+function renderLodgeAdminButton() {
+  const container = document.querySelector('#app-lodges .section-body');
+  if (container && APP.user?.role === 'admin') {
+    const existing = container.querySelector('.btn-add-lodge');
+    if (!existing) {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-primary btn-add-lodge';
+      btn.textContent = '+ Add lodge';
+      btn.style.marginBottom = '20px';
+      btn.style.width = '100%';
+      btn.onclick = openAddLodgeModal;
+      container.insertBefore(btn, container.firstChild);
+    }
+  }
+}
+
+function openAddLodgeModal() {
+  const name = prompt('Lodge name:', '');
+  if (!name) return;
+  const state = prompt('State:', '');
+  if (!state) return;
+  const price = prompt('Monthly rent (₦):', '');
+  if (!price) return;
+  addLodge({ name, state, price: parseInt(price) || 0, location: { type: 'Point', coordinates: [0, 0] } });
+}
+
+async function addLodge(data) {
+  try {
+    await POST('/lodges', data);
+    toast('Lodge added!', 'success');
+    loadLodges();
+  } catch(e) {
+    toast('Failed to add lodge: ' + e.message, 'error');
+  }
+}
+
+function renderLodges(lodges) {
+  const grid = document.getElementById('lodgesGrid');
+  if (!lodges.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1"><div class="empty-state"><div class="empty-state-icon">🏠</div><div class="empty-state-title">No lodges found</div></div></div>`;
+    return;
+  }
+  grid.innerHTML = lodges.map(l => {
+    const price = l.price || l.rentPerMonth || l.monthlyRent || 0;
+    const amenities = l.amenities || [];
+    return `
+    <div class="lodge-card" onclick="openLodgeDetail('${l._id}')">
+      <div class="lodge-img">
+        ${l.images?.[0] || l.image ? `<img src="${l.images?.[0] || l.image}" alt="${l.name}" loading="lazy"/>` : `<div class="lodge-img-placeholder">🏠</div>`}
+      </div>
+      <div class="lodge-body">
+        <div class="lodge-name">${l.name}</div>
+        <div class="lodge-address">${[l.address, l.area, l.state].filter(Boolean).join(', ')}</div>
+        <div class="lodge-price">${price ? `₦${fmt(price)}` : 'Price on request'} <small>/ month</small></div>
+        ${amenities.length ? `<div class="amenity-list">${amenities.slice(0,4).map(a=>`<span class="amenity">${a}</span>`).join('')}</div>` : ''}
+        <div class="flex items-center justify-between mt-12">
+          <div class="badge badge-green"><div class="badge-dot"></div>Verified</div>
+          <span style="font-size:12px;color:var(--green-2)">Details →</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterLodges() {
+  const q = document.getElementById('lodgeSearch').value.toLowerCase();
+  const state = document.getElementById('lodgeStateFilter').value;
+  const sort = document.getElementById('lodgeSortBy').value;
+  let filtered = APP.lodges;
+  if (q) filtered = filtered.filter(l => (l.name + (l.state||'')).toLowerCase().includes(q));
+  if (state) filtered = filtered.filter(l => l.state === state);
+  if (sort === 'price-asc') filtered = [...filtered].sort((a,b) => (a.price||0)-(b.price||0));
+  if (sort === 'price-desc') filtered = [...filtered].sort((a,b) => (b.price||0)-(a.price||0));
+  renderLodges(filtered);
+}
+
+async function openLodgeDetail(id) {
+  const lodge = APP.lodges.find(l => l._id === id);
+  if (!lodge) return;
+  let l = lodge;
+  try { const d = await GET(`/lodges/${id}`, false); l = d.lodge || d.data || d; } catch(e){}
+  const amenities = l.amenities || [];
+  openDetail(l.name, `
+    <div class="detail-section">
+      <div class="detail-section-title">Location</div>
+      ${detailRow('Address', l.address || '—')}
+      ${detailRow('Area', l.area || '—')}
+      ${detailRow('State', l.state || '—')}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Pricing</div>
+      ${detailRow('Monthly rent', l.price ? `₦${fmt(l.price)}` : l.rentPerMonth ? `₦${fmt(l.rentPerMonth)}` : '—')}
+      ${detailRow('Rooms', l.rooms || '—')}
+    </div>
+    ${amenities.length ? `<div class="detail-section"><div class="detail-section-title">Amenities</div><div class="amenity-list">${amenities.map(a=>`<span class="amenity">${a}</span>`).join('')}</div></div>` : ''}
+    <div class="detail-section">
+      <div class="detail-section-title">Contact</div>
+      ${detailRow('Agent', l.contactName || l.agent || '—')}
+      ${detailRow('Phone', l.contactPhone || l.phone || '—')}
+    </div>
+    ${l.description ? `<div class="detail-section"><div class="detail-section-title">About</div><p style="font-size:13px;color:var(--ink-70);line-height:1.7">${l.description}</p></div>` : ''}
+  `);
+}
+
+/* ================================================================
+   CHECKLIST
+================================================================ */
+async function loadChecklist() {
+  const container = document.getElementById('checklistContent');
+  container.innerHTML = `<div class="loading-wrap"><div class="spinner spinner-lg"></div></div>`;
+  try {
+    const [journeyData, progressData] = await Promise.all([
+      GET('/checklist/journey'),
+      GET('/checklist/progress'),
+    ]);
+    const sections = journeyData.sections || journeyData.data?.sections || journeyData || [];
+    const progress = progressData.completedItems || progressData.data?.completedItems || progressData.progress || {};
+    APP.checklist = sections;
+    APP.progress = progress;
+    renderChecklist(sections, progress);
+    updateChecklistProgress(progressData);
+  } catch(e) {
+    container.innerHTML = `<div class="alert alert-error">Failed to load checklist: ${e.message}</div>`;
+  }
+}
+
+function renderChecklist(sections, progress) {
+  const container = document.getElementById('checklistContent');
+  let html = '';
+  if (APP.user?.role === 'admin') {
+    html = `<div style="margin-bottom:20px"><button onclick="openAddChecklistItemModal()" class="btn btn-primary" style="width:100%">+ Add checklist item</button></div>`;
+  }
+  if (!sections.length) {
+    container.innerHTML = html + `<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No checklist items yet</div></div>`;
+    return;
+  }
+  html += sections.map(section => {
+    const items = section.items || section.checklistItems || [];
+    const doneCount = items.filter(i => isItemDone(i._id, progress)).length;
+    return `
+    <div class="journey-section">
+      <div class="journey-section-header">
+        <h3 class="journey-section-title">${section.title || section.name}</h3>
+        <span class="journey-progress">${doneCount}/${items.length} done</span>
+      </div>
+      <div class="checklist-items">
+        ${items.map(item => {
+          const done = isItemDone(item._id, progress);
+          return `
+          <div class="check-item ${done ? 'done' : ''}" id="check-${item._id}" onclick="toggleCheckItem('${item._id}')">
+            <div class="check-box">
+              ${done ? `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}
+            </div>
+            <span class="check-label">${item.title || item.name || item.text}</span>
+            ${item.priority ? `<span class="badge badge-${item.priority==='high'?'red':item.priority==='medium'?'gold':'gray'} check-badge">${item.priority}</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  container.innerHTML = html;
+}
+
+async function openAddChecklistItemModal() {
+  try {
+    const journeyData = await GET('/checklist/journey');
+    const sections = journeyData.sections || journeyData.data?.sections || journeyData || [];
+    if (!sections || sections.length === 0) {
+      if (APP.user?.role === 'admin') {
+        const newSection = prompt('No sections found. Create a new section title:', 'Pre-deployment');
+        if (!newSection) return;
+        await POST('/checklist/sections', { title: newSection, order: 1 });
+        toast('Section created. Now add items.', 'success');
+        loadChecklist();
+        return;
+      }
+      toast('No sections available. Please ask an admin to create checklist sections.', 'error');
+      return;
+    }
+    const sectionChoices = sections.map((s, i) => `${i + 1}. ${s.title || s.name}`).join('\n');
+    const selected = parseInt(prompt(`Choose a section by number:\n${sectionChoices}`, '1'), 10);
+    if (!selected || selected < 1 || selected > sections.length) {
+      toast('Invalid section selected.', 'error');
+      return;
+    }
+    const sectionId = sections[selected - 1]._id;
+    const text = prompt('What would you like to add?', '');
+    if (!text) return;
+    addChecklistItem(text, sectionId);
+  } catch(e) {
+    toast('Failed to load sections: ' + e.message, 'error');
+  }
+}
+
+async function addChecklistItem(text, section) {
+  try {
+    console.log('Adding checklist item:', { text, section });
+    const res = await POST('/checklist/items', { text, section });
+    console.log('Checklist item added:', res);
+    toast('Item added!', 'success');
+    loadChecklist();
+  } catch(e) {
+    console.error('Failed to add checklist item:', e);
+    toast('Failed to add item: ' + e.message, 'error');
+  }
+}
+
+function isItemDone(id, progress) {
+  if (Array.isArray(progress)) return progress.some(p => p.itemId === id || p.item === id || p === id);
+  if (typeof progress === 'object') return progress[id] === true || !!progress[id];
+  return false;
+}
+
+async function toggleCheckItem(itemId) {
+  const el = document.getElementById(`check-${itemId}`);
+  try {
+    await PATCH(`/checklist/${itemId}`, {});
+    el.classList.toggle('done');
+    const box = el.querySelector('.check-box');
+    const isDone = el.classList.contains('done');
+    box.innerHTML = isDone ? `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : '';
+    // Refresh progress
+    const prog = await GET('/checklist/progress');
+    updateChecklistProgress(prog);
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+function updateChecklistProgress(data) {
+  const pct = data.percentage || data.data?.percentage || 0;
+  const rounded = Math.round(pct);
+  document.getElementById('checklistPctDisplay').textContent = `${rounded}%`;
+  const circ = 2 * Math.PI * 20; // r=20
+  const offset = circ - (pct / 100) * circ;
+  document.getElementById('checklistRing').style.strokeDashoffset = offset;
+}
+
+/* ================================================================
+   BUDGET
+================================================================ */
+function initBudgetPage() {
+  const sel = document.getElementById('budget-state');
+  if (sel.children.length <= 1) {
+    NIGERIA_STATES.forEach(s => {
+      const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o);
+    });
+  }
+}
+
+async function estimateBudget() {
+  const state = document.getElementById('budget-state').value;
+  const income = parseFloat(document.getElementById('budget-income').value) || 0;
+  const accommodation = parseFloat(document.getElementById('budget-accommodation').value) || 0;
+  const transport = parseFloat(document.getElementById('budget-transport').value) || 0;
+  const food = parseFloat(document.getElementById('budget-food').value) || 0;
+  const other = parseFloat(document.getElementById('budget-other').value) || 0;
+  if (!state) { toast('Please select your deployment state', 'error'); return; }
+  const wrap = document.getElementById('budget-result-wrap');
+  wrap.innerHTML = `<div class="loading-wrap"><div class="spinner spinner-lg"></div></div>`;
+  try {
+    const payload = { state, income, accommodation, transport, food, miscellaneous: other };
+    const data = await POST('/budget', payload, false);
+    const result = data.estimate || data.data || data;
+    const total = result.totalExpenses || result.total || (accommodation + transport + food + other);
+    const buffer = result.buffer || result.recommendedBuffer || Math.round(total * 0.1);
+    const balance = income - total;
+    const risk = result.riskLevel || (balance < 0 ? 'high' : balance < 5000 ? 'medium' : 'low');
+    wrap.innerHTML = `
+      <div class="budget-result slide-up">
+        <div class="budget-total">
+          <div class="budget-total-label">Total monthly expenses</div>
+          <div class="budget-total-amount">₦${fmt(total)}</div>
+          <div class="budget-total-note">Deployment state: ${state}</div>
+        </div>
+        <div class="budget-breakdown">
+          ${accommodation ? `<div class="budget-row"><span class="budget-row-label">Accommodation</span><span class="budget-row-value">₦${fmt(accommodation)}</span></div>` : ''}
+          ${transport ? `<div class="budget-row"><span class="budget-row-label">Transport</span><span class="budget-row-value">₦${fmt(transport)}</span></div>` : ''}
+          ${food ? `<div class="budget-row"><span class="budget-row-label">Food</span><span class="budget-row-value">₦${fmt(food)}</span></div>` : ''}
+          ${other ? `<div class="budget-row"><span class="budget-row-label">Other expenses</span><span class="budget-row-value">₦${fmt(other)}</span></div>` : ''}
+          ${buffer ? `<div class="budget-row"><span class="budget-row-label">Recommended buffer (10%)</span><span class="budget-row-value">₦${fmt(buffer)}</span></div>` : ''}
+          <div class="budget-row total"><span class="budget-row-label">Monthly balance</span><span class="budget-row-value" style="color:${balance>=0?'var(--green-2)':'var(--red)'}">₦${fmt(balance)}</span></div>
+        </div>
+        ${risk === 'high' ? `<div class="budget-alert danger">⚠️ High financial risk — your expenses exceed your income. Consider reducing costs.</div>` : ''}
+        ${risk === 'medium' ? `<div class="budget-alert warning">⚡ Moderate risk — your balance is tight. Consider building an emergency fund.</div>` : ''}
+        ${risk === 'low' ? `<div class="budget-alert" style="background:var(--green-bg);color:var(--green-2);border:1px solid var(--green-border)">✓ Healthy budget — you have reasonable buffer for unexpected expenses.</div>` : ''}
+      </div>`;
+  } catch(e) {
+    wrap.innerHTML = `<div class="alert alert-error">Failed to estimate budget: ${e.message}</div>`;
+  }
+}
+
+/* ================================================================
+   CULTURE
+================================================================ */
+async function loadCulture() {
+  try {
+    const data = await GET('/culture', false);
+    APP.culture = data.content || data.culturalContent || data.data || data || [];
+    renderCulture(APP.culture);
+    renderCultureAdminButton();
+  } catch(e) {
+    document.getElementById('cultureGrid').innerHTML = `<div style="grid-column:1/-1"><div class="alert alert-error">Failed to load: ${e.message}</div></div>`;
+  }
+}
+
+function renderCultureAdminButton() {
+  if (APP.user?.role !== 'admin') return;
+  const grid = document.getElementById('cultureGrid');
+  if (!grid || grid.querySelector('.btn-add-culture')) return;
+  const wrapper = document.createElement('div');
+  wrapper.style.gridColumn = '1/-1';
+  wrapper.style.marginBottom = '20px';
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-primary btn-add-culture';
+  btn.textContent = '+ Add culture guide';
+  btn.style.width = '100%';
+  btn.onclick = openAddCultureModal;
+  wrapper.appendChild(btn);
+  grid.insertBefore(wrapper, grid.firstChild);
+}
+
+function openAddCultureModal() {
+  const state = prompt('State:', '');
+  if (!state) return;
+  const title = prompt('Title:', '');
+  if (!title) return;
+  let category = prompt('Category (Food/Festivals/Language/Customs/Other):', 'Other');
+  if (!category) return;
+  category = category.trim().replace(/\s+/g,'');
+  const validCategories = ['Food','Festivals','Language','Customs','Other'];
+  category = validCategories.find(c => c.toLowerCase() === category.toLowerCase()) || 'Other';
+  const content = prompt('Content (details):', '');
+  if (!content) return;
+  const tags = prompt('Tags/keywords (comma-separated, optional):', '');
+  addCulture({ state, title, category, content, tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [] });
+}
+
+async function addCulture(data) {
+  try {
+    await POST('/culture', data);
+    toast('Culture guide added!', 'success');
+    loadCulture();
+  } catch(e) {
+    toast('Failed to add culture guide: ' + e.message, 'error');
+  }
+}
+
+function renderCulture(items) {
+  const grid = document.getElementById('cultureGrid');
+  if (!items.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1"><div class="empty-state"><div class="empty-state-icon">🌍</div><div class="empty-state-title">No culture guides yet</div></div></div>`;
+    return;
+  }
+  grid.innerHTML = items.map(c => {
+    const tags = c.tags || c.keywords || [];
+    return `
+    <div class="culture-card" onclick="openCultureDetail('${c._id}')">
+      <div class="culture-card-header">
+        <div class="culture-card-state">${c.state}</div>
+        <div class="culture-card-type">${c.type || c.category || 'Guide'}</div>
+      </div>
+      <div class="culture-card-body">
+        <div class="culture-card-title">${c.title || c.name}</div>
+        <div class="culture-card-desc">${c.description || c.content || ''}</div>
+        ${tags.length ? `<div class="culture-tag-list">${tags.slice(0,3).map(t=>`<span class="culture-tag">${t}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterCulture() {
+  const q = document.getElementById('cultureSearch').value.toLowerCase();
+  const type = document.getElementById('cultureTypeFilter').value;
+  let filtered = APP.culture;
+  if (q) filtered = filtered.filter(c => (c.state + c.title + c.description).toLowerCase().includes(q));
+  if (type) filtered = filtered.filter(c => (c.type||c.category||'').toLowerCase() === type);
+  renderCulture(filtered);
+}
+
+async function openCultureDetail(id) {
+  const item = APP.culture.find(c => c._id === id);
+  if (!item) return;
+  let c = item;
+  try { const d = await GET(`/culture/${id}`, false); c = d.content || d.culturalContent || d.data || d; } catch(e){}
+  document.getElementById('cultureDetailTitle').textContent = `${c.state} — ${c.title || c.name}`;
+  document.getElementById('cultureDetailBody').innerHTML = `
+    <div class="flex items-center gap-8 mb-16">
+      <span class="badge badge-green">${c.type || c.category || 'Guide'}</span>
+      <span class="badge badge-gray">${c.state}</span>
+    </div>
+    ${c.description ? `<p style="font-size:14px;line-height:1.7;margin-bottom:16px">${c.description}</p>` : ''}
+    ${c.content ? `<p style="font-size:14px;line-height:1.7;margin-bottom:16px">${c.content}</p>` : ''}
+    ${c.languages?.length ? `<div class="mb-12"><div class="form-label mb-8">Languages</div><div class="amenity-list">${c.languages.map(l=>`<span class="amenity">${l}</span>`).join('')}</div></div>` : ''}
+    ${c.festivals?.length ? `<div class="mb-12"><div class="form-label mb-8">Festivals</div><div class="amenity-list">${c.festivals.map(f=>`<span class="amenity">${f}</span>`).join('')}</div></div>` : ''}
+    ${c.cuisines?.length ? `<div class="mb-12"><div class="form-label mb-8">Cuisines</div><div class="amenity-list">${c.cuisines.map(f=>`<span class="amenity">${f}</span>`).join('')}</div></div>` : ''}
+    ${c.etiquette ? `<div class="mb-12"><div class="form-label mb-8">Etiquette tips</div><p style="font-size:13px;line-height:1.7">${Array.isArray(c.etiquette) ? c.etiquette.join(' • ') : c.etiquette}</p></div>` : ''}
+    ${c.safetyTips ? `<div class="budget-alert warning mt-12">🛡️ ${Array.isArray(c.safetyTips) ? c.safetyTips.join(' • ') : c.safetyTips}</div>` : ''}
+  `;
+  openModal('cultureDetailModal');
+}
+
+/* ================================================================
+   MAP
+================================================================ */
+function initMap() {
+  APP.map = L.map('map-container').setView([9.082, 8.675], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap', maxZoom: 18
+  }).addTo(APP.map);
+  loadMapData();
+}
+
+async function loadMapData() {
+  try {
+    const data = await GET('/map/markers', false);
+    const markers = data.markers || data.data || data || [];
+    const landmarkList = document.getElementById('landmarkList');
+    const landmarks = [];
+    markers.forEach(m => {
+      if (!m.lat && !m.coordinates) return;
+      const lat = m.lat || m.coordinates?.[1] || m.coordinates?.lat;
+      const lng = m.lng || m.coordinates?.[0] || m.coordinates?.lng;
+      if (!lat || !lng) return;
+      const color = m.type === 'lodge' ? '#b8851f' : m.type === 'secretariat' ? '#1d5fa8' : '#1b4d30';
+      const icon = L.divIcon({
+        html: `<div style="width:12px;height:12px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,.3)"></div>`,
+        className: '', iconSize: [12,12]
+      });
+      const marker = L.marker([lat, lng], { icon }).addTo(APP.map);
+      const popup = `<strong>${m.name || m.title}</strong><br>${m.type || 'area'}<br>${m.state || ''}`;
+      marker.bindPopup(popup);
+      if (m.type === 'secretariat' || m.isLandmark) {
+        landmarks.push({ name: m.name || m.title, type: m.type || 'secretariat', lat, lng, marker });
+      }
+    });
+    if (landmarks.length) {
+      landmarkList.innerHTML = landmarks.map((l, i) => `
+        <div class="landmark-item" onclick="flyToLandmark(${i})">
+          <div class="landmark-name">${l.name}</div>
+          <div class="landmark-type">${l.type}</div>
+        </div>`).join('');
+      APP.landmarks = landmarks;
+    } else {
+      landmarkList.innerHTML = `<p class="text-sm text-muted" style="padding:8px">No landmarks found</p>`;
+    }
+  } catch(e) {
+    document.getElementById('landmarkList').innerHTML = `<div class="alert alert-error" style="margin:8px">${e.message}</div>`;
+  }
+}
+
+function flyToLandmark(i) {
+  if (!APP.landmarks?.[i]) return;
+  const l = APP.landmarks[i];
+  APP.map.flyTo([l.lat, l.lng], 13);
+  l.marker.openPopup();
+}
+
+/* ================================================================
+   MESSAGES
+================================================================ */
+let messagesRefreshInterval;
+
+async function loadMessages() {
+  try {
+    const data = await GET('/messages');
+    const msgs = data.messages || data.data || data || [];
+    // Group by conversation partner
+    const convMap = {};
+    msgs.forEach(m => {
+      if (!m.sender || !m.receiver) return; // Skip if sender/receiver is null
+      const partner = m.sender._id === APP.user?._id ? m.receiver : m.sender;
+      const pid = partner?._id || partner;
+      if (!pid || !convMap[pid]) convMap[pid] = { partner, messages: [] };
+      if (pid) convMap[pid].messages.push(m);
+    });
+    APP.conversations = convMap;
+    renderConvList(convMap);
+  } catch(e) {
+    document.getElementById('convList').innerHTML = `<div class="loading-wrap" style="padding:16px"><p class="text-sm text-muted">${e.message}</p></div>`;
+  }
+}
+
+function startMessagesAutoRefresh() {
+  if (messagesRefreshInterval) clearInterval(messagesRefreshInterval);
+  messagesRefreshInterval = setInterval(() => {
+    if (document.getElementById('app-messages').classList.contains('active')) {
+      loadMessages();
+    }
+  }, 1000); // 1 second
+}
+
+function stopMessagesAutoRefresh() {
+  if (messagesRefreshInterval) {
+    clearInterval(messagesRefreshInterval);
+    messagesRefreshInterval = null;
+  }
+}
+
+function renderConvList(convMap) {
+  const list = document.getElementById('convList');
+  const convs = Object.values(convMap);
+  if (!convs.length) {
+    list.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-state-icon">💬</div><div class="empty-state-title" style="font-size:14px">No messages yet</div></div>`;
+    return;
+  }
+  list.innerHTML = convs.map(c => {
+    const name = c.partner?.firstName ? `${c.partner.firstName} ${c.partner.lastName||''}`.trim() : (c.partner?.name || 'User');
+    const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    const last = c.messages[c.messages.length - 1];
+    const unread = c.messages.filter(m => !m.read && m.sender && m.sender._id !== APP.user?._id).length;
+    const partnerId = c.partner?._id || c.partner;
+    return `
+    <div class="conv-item ${APP.currentConv === partnerId ? 'active' : ''}" onclick="openConversation('${partnerId}', '${name}')">
+      <div class="conv-avatar">${initials}</div>
+      <div class="conv-info">
+        <div class="conv-name">${name}</div>
+        <div class="conv-preview">${last?.content || '—'}</div>
+      </div>
+      ${unread ? `<div class="unread-dot"></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function openConversation(userId, name) {
+  APP.currentConv = userId;
+  const chatArea = document.getElementById('chatArea');
+  chatArea.innerHTML = `
+    <div class="chat-header">
+      <div class="conv-avatar">${name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+      <div class="conv-name">${name}</div>
+    </div>
+    <div class="chat-messages" id="chatMessages"><div class="loading-wrap"><div class="spinner spinner-sm"></div></div></div>
+    <div class="chat-input-area">
+      <textarea class="chat-input" id="chatInputField" placeholder="Type a message…" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMsg('${userId}')}"></textarea>
+      <button class="chat-send" onclick="sendChatMsg('${userId}')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>`;
+  try {
+    const data = await GET(`/messages/conversation/${userId}`);
+    const msgs = data.messages || data.data || data || [];
+    renderChatMessages(msgs);
+  } catch(e) {
+    document.getElementById('chatMessages').innerHTML = `<div class="chat-empty">${e.message}</div>`;
+  }
+}
+
+function renderChatMessages(msgs) {
+  const container = document.getElementById('chatMessages');
+  if (!msgs.length) { container.innerHTML = `<div class="chat-empty">No messages yet. Say hello!</div>`; return; }
+  container.innerHTML = msgs.map(m => {
+    const mine = m.sender?._id === APP.user?._id || m.sender === APP.user?._id;
+    const senderName = mine ? 'You' : (m.sender?.name || m.sender?.email || 'Unknown');
+    return `
+    <div class="msg ${mine ? 'mine' : 'theirs'}">
+      ${!mine ? `<div class="msg-sender" style="font-size:12px;color:var(--ink-70);margin-bottom:4px">${senderName}</div>` : ''}
+      <div class="msg-bubble">${m.content || m.text || m.body}</div>
+      <div class="msg-time">${formatTime(m.createdAt || m.timestamp)}</div>
+    </div>`;
+  }).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendChatMsg(toId) {
+  const input = document.getElementById('chatInputField');
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+  try {
+    await POST('/messages', { receiver: toId, content });
+    const data = await GET(`/messages/conversation/${toId}`);
+    renderChatMessages(data.messages || data.data || data || []);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function showNewMessageModal() { openModal('newMessageModal'); }
+
+async function sendNewMessage() {
+  const to = document.getElementById('msg-recipient').value.trim();
+  const content = document.getElementById('msg-body').value.trim();
+  if (!to || !content) { toast('Please fill in recipient and message', 'error'); return; }
+  try {
+    await POST('/messages', { receiver: to, content });
+    toast('Message sent!', 'success');
+    closeModal('newMessageModal');
+    loadMessages();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+/* ================================================================
+   PROFILE
+================================================================ */
+async function loadProfile() {
+  try {
+    const data = await GET('/users/profile');
+    const profile = data.profile || data.data || data;  // Skip data.user as it's the nested user object
+    const user = APP.user;
+    // Profile comes back with nested user object from populate
+    const userName = profile.user?.name || user?.name || (user?.firstName ? `${user.firstName} ${user.lastName||''}`.trim() : '—');
+    const userEmail = profile.user?.email || user?.email || '—';
+    const name = userName;
+    const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    document.getElementById('profileAvatarLg').textContent = initials;
+    document.getElementById('profileNameLg').textContent = name;
+    document.getElementById('profileMeta').textContent = [profile.role || user?.role || 'Corps member', profile.postedState || user?.postedState].filter(Boolean).join(' • ');
+    document.getElementById('profilePersonal').innerHTML = `
+      ${detailRow('Full name', name)}
+      ${detailRow('Email', userEmail)}
+      ${detailRow('Phone', profile.phone || profile.phoneNumber || '—')}
+    `;
+    document.getElementById('profileNYSC').innerHTML = `
+      ${detailRow('State code', profile.stateCode || '—')}
+      ${detailRow('Deployment state', profile.postedState || '—')}
+      ${detailRow('Batch', profile.batch || '—')}
+      ${detailRow('LGA', profile.lga || '—')}
+      ${detailRow('PPA', profile.ppa || '—')}
+    `;
+    // Prefill edit modal
+    document.getElementById('edit-phone').value = profile.phone || '';
+    document.getElementById('edit-state').value = profile.postedState || '';
+    document.getElementById('edit-statecode').value = profile.stateCode || '';
+    document.getElementById('edit-ppa').value = profile.ppa || '';
+  } catch(e) {
+    document.getElementById('profilePersonal').innerHTML = `<p class="text-sm text-muted">${e.message}</p>`;
+  }
+}
+
+function openEditProfileModal() {
+  // Populate state dropdown if needed
+  const sel = document.getElementById('edit-state');
+  if (sel.children.length <= 1) {
+    NIGERIA_STATES.forEach(s => { const o = document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
+  }
+  openModal('editProfileModal');
+}
+
+async function saveProfile() {
+  const phone = document.getElementById('edit-phone').value;
+  const postedState = document.getElementById('edit-state').value;
+  const stateCode = document.getElementById('edit-statecode').value;
+  const ppa = document.getElementById('edit-ppa').value;
+  try {
+    await PUT('/users/profile', { phone, postedState, stateCode, ppa });
+    toast('Profile updated!', 'success');
+    closeModal('editProfileModal');
+    loadProfile();
+    // Update sidebar
+    if (APP.user) { APP.user.postedState = postedState; updateSidebarUser(); }
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+/* ================================================================
+   SETTINGS
+================================================================ */
+function loadSettingsPage() {
+  const u = APP.user;
+  document.getElementById('settingsEmail').textContent = u?.email || '—';
+}
+
+function showChangePasswordModal() {
+  toast('Password change coming soon', '');
+}
+
+/* ================================================================
+   SEARCH
+================================================================ */
+function handleSearch(q) {
+  const active = document.querySelector('.app-page.active')?.id?.replace('app-','');
+  if (active === 'areas') { document.getElementById('areaSearch').value = q; filterAreas(); }
+  if (active === 'lodges') { document.getElementById('lodgeSearch').value = q; filterLodges(); }
+  if (active === 'culture') { document.getElementById('cultureSearch').value = q; filterCulture(); }
+}
+
+/* ================================================================
+   HELPERS
+================================================================ */
+function fmt(n) {
+  if (!n && n !== 0) return '—';
+  return Number(n).toLocaleString('en-NG');
+}
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
+}
+function detailRow(label, value) {
+  return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-value">${value || '—'}</span></div>`;
+}
+function populateStateFilter(elId, items, field) {
+  const sel = document.getElementById(elId);
+  const states = [...new Set(items.map(i => i[field]).filter(Boolean))].sort();
+  states.forEach(s => {
+    if (!sel.querySelector(`option[value="${s}"]`)) {
+      const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o);
+    }
+  });
+}
+
+/* ================================================================
+   REGISTER FORM STATES POPULATION
+================================================================ */
+function populateRegisterStates() {
+  const sel = document.getElementById('reg-state');
+  if (sel && sel.children.length <= 1) {
+    NIGERIA_STATES.forEach(s => {
+      const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o);
+    });
+  }
+}
+
+/* ================================================================
+   BOOT
+================================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  populateRegisterStates();
+  // Enter key on login
+  document.getElementById('login-password')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  // Try auto-login from stored token
+  if (loadToken()) {
+    initApp();
+  } else {
+    showPage('page-login');
+  }
+});
+</script>
+</body>
+</html>
