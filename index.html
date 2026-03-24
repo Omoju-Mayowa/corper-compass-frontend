@@ -1573,7 +1573,7 @@ async function loadDashboard() {
   const u = APP.user;
   const name = u?.firstName || u?.name?.split(' ')[0] || 'Corper';
   document.getElementById('dash-greeting').textContent = `Welcome back, ${name} 👋`;
-  document.getElementById('dash-userid').textContent = `User ID: ${u?._id || '—'}`;
+  // document.getElementById('dash-userid').textContent = `User ID: ${u?._id || '—'}`;
   document.getElementById('dash-user-id').textContent = u?._id || '—';
   document.getElementById('dash-clearance').textContent = 'Cleared ✓';
   document.getElementById('dash-cds').textContent = 'Mar 31';
