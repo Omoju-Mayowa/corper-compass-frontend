@@ -1600,11 +1600,15 @@ async function loadDashboard() {
 
   // Upcoming tasks
   try {
-    const data = await GET('/checklist/journey');
-    const sections = data.sections || data.data?.sections || data || [];
+    const [journeyData, progressData] = await Promise.all([
+      GET('/checklist/journey'),
+      GET('/checklist/progress')
+    ]);
+    const sections = journeyData.sections || journeyData.data?.sections || journeyData || [];
+    const completedItems = progressData.completedItems || progressData.data?.completedItems || [];
     let items = [];
     sections.forEach(s => { if (s.items) items = items.concat(s.items); });
-    const pending = items.filter(i => !i.completed).slice(0,4);
+    const pending = items.filter(i => !completedItems.includes(String(i._id))).slice(0,4);
     const container = document.getElementById('dashUpcomingTasks');
     if (pending.length === 0) {
       container.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-state-icon">🎉</div><div class="empty-state-title">All caught up!</div></div>`;
