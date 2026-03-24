@@ -1349,8 +1349,9 @@ let APP = {
 ================================================================ */
 async function api(method, path, body = null, auth = true) {
   const headers = { 'Content-Type': 'application/json' };
+  // Cookies are sent automatically, but include token header for backward compatibility
   if (auth && APP.token) headers['Authorization'] = `Bearer ${APP.token}`;
-  const opts = { method, headers, credentials: 'include' };
+  const opts = { method, headers, credentials: 'include' }; // Include cookies
   if (body) opts.body = JSON.stringify(body);
   try {
     const res = await fetch(CONFIG.BASE_URL + path, opts);
@@ -1367,19 +1368,18 @@ const PUT  = (path, body, auth=true) => api('PUT', path, body, auth);
 const PATCH = (path, body, auth=true) => api('PATCH', path, body, auth);
 
 /* ================================================================
-   TOKEN STORAGE
+   TOKEN STORAGE (Now using cookies)
 ================================================================ */
 function saveToken(token) {
-  APP.token = token;
-  localStorage.setItem('cc_token', token);
+  // Token is now stored in httpOnly cookie by backend
+  APP.token = token; // Keep in memory for backward compatibility
 }
 function loadToken() {
-  APP.token = localStorage.getItem('cc_token');
-  return !!APP.token;
+  // Token is automatically sent via cookies
+  return true; // Assume authenticated if no 401 errors
 }
 function clearToken() {
   APP.token = null;
-  localStorage.removeItem('cc_token');
 }
 
 /* ================================================================
@@ -1543,8 +1543,12 @@ async function initApp() {
     try {
       const data = await GET('/auth/me');
       APP.user = data.user || data.data || data;
+      // Save token if provided (for backward compatibility)
+      if (data.token) saveToken(data.token);
     } catch(e) {
-      clearToken(); showPage('page-login'); return;
+      clearToken();
+      showPage('page-login');
+      return;
     }
   }
   updateSidebarUser();
