@@ -1973,10 +1973,12 @@ async function loadChecklist() {
       GET('/checklist/progress'),
     ]);
     const sections = journeyData.sections || journeyData.data?.sections || journeyData || [];
-    const progress = progressData.completedItems || progressData.data?.completedItems || progressData.progress || {};
+    const progress = progressData.completedItems || progressData.data?.completedItems || progressData.progress || [];
+    // Ensure progress is always an array of strings
+    const progressArray = Array.isArray(progress) ? progress.map(p => String(p)) : [];
     APP.checklist = sections;
-    APP.progress = progress;
-    renderChecklist(sections, progress);
+    APP.progress = progressArray;
+    renderChecklist(sections, progressArray);
     updateChecklistProgress(progressData);
   } catch(e) {
     container.innerHTML = `<div class="alert alert-error">Failed to load checklist: ${e.message}</div>`;
@@ -2065,13 +2067,18 @@ async function addChecklistItem(text, section) {
 }
 
 function isItemDone(id, progress) {
-  if (Array.isArray(progress)) return progress.includes(id);
+  if (Array.isArray(progress)) {
+    // Ensure both id and progress items are strings for comparison
+    const idStr = String(id);
+    return progress.some(p => String(p) === idStr);
+  }
   if (typeof progress === 'object') return progress[id] === true || !!progress[id];
   return false;
 }
 
 async function toggleCheckItem(itemId) {
-  const el = document.getElementById(`check-${itemId}`);
+  const itemIdStr = String(itemId);
+  const el = document.getElementById(`check-${itemIdStr}`);
   const wasDone = el.classList.contains('done');
   const newDone = !wasDone;
 
@@ -2081,8 +2088,18 @@ async function toggleCheckItem(itemId) {
   box.innerHTML = newDone ? `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : '';
 
   try {
-    await PATCH(`/checklist/${itemId}`, { completed: newDone });
-    // Refresh progress after successful API call
+    await PATCH(`/checklist/${itemIdStr}`, { completed: newDone });
+    // Update local progress
+    if (newDone) {
+      if (!APP.progress.some(p => String(p) === itemIdStr)) {
+        APP.progress.push(itemIdStr);
+      }
+    } else {
+      APP.progress = APP.progress.filter(p => String(p) !== itemIdStr);
+    }
+    // Re-render to update section counts
+    renderChecklist(APP.checklist, APP.progress);
+    // Refresh progress percentage
     const prog = await GET('/checklist/progress');
     updateChecklistProgress(prog);
   } catch(e) {
